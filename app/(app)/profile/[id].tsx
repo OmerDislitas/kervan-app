@@ -38,9 +38,11 @@ type MyEvent = {
 };
 
 async function fetchUserProfile(userId: string) {
+  // Başka kullanıcının profili: yalnızca herkese açık güvenli kolonlar.
+  // email/phone/push_token ARTIK okunamaz (PII koruması — security_fixes.sql K-2).
   const { data, error } = await supabase
     .from('profiles')
-    .select('*')
+    .select('id, full_name, username, bio, gender, role, is_private, points, followers_count, following_count, university_name, department, university_year, created_at')
     .eq('id', userId)
     .single();
   if (error) throw error;

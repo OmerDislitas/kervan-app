@@ -31,7 +31,7 @@ type Organization = {
   created_at: string;
 };
 
-async function fetchOrganizations(): Promise<Organization[]> {
+export async function fetchOrganizations(): Promise<Organization[]> {
   const { data, error } = await supabase
     .from('organizations')
     .select('*')
@@ -41,7 +41,7 @@ async function fetchOrganizations(): Promise<Organization[]> {
   return data ?? [];
 }
 
-async function fetchActiveEventsCount(): Promise<Record<string, number>> {
+export async function fetchActiveEventsCount(): Promise<Record<string, number>> {
   const { data, error } = await supabase
     .from('events')
     .select('organization_id')

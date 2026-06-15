@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -10,6 +10,11 @@ import { Colors, useThemeColors } from '@/constants/theme';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { requestPermissions, registerPushToken } from '@/lib/notificationService';
 import * as Notifications from 'expo-notifications';
+import * as SplashScreen from 'expo-splash-screen';
+import { onSplashDone } from '@/lib/splashState';
+
+// Native splash ekranını JS bundle yüklenene kadar dondur
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,6 +32,14 @@ function RootLayoutNav() {
   const router = useRouter();
   const lastNotificationResponse = Notifications.useLastNotificationResponse();
 
+  // Splash animasyonu tamamlandığında true olur
+  // index.tsx'teki markSplashDone() sinyalini burada dinliyoruz
+  const [splashReady, setSplashReady] = useState(false);
+  useEffect(() => {
+    const unsub = onSplashDone(() => setSplashReady(true));
+    return unsub;
+  }, []);
+
   useEffect(() => {
     if (
       lastNotificationResponse &&
@@ -43,13 +56,26 @@ function RootLayoutNav() {
   }, [lastNotificationResponse, session]);
 
   useEffect(() => {
+    // Geçersiz/süresi dolmuş refresh token'ı YEREL depodan kesin olarak temizle.
+    // scope:'local' sunucuya istek atmadan AsyncStorage'daki oturumu siler;
+    // böylece "Invalid Refresh Token" hatası bir sonraki açılışta tekrarlamaz.
+    const clearStaleSession = async () => {
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch {
+        // ignore
+      }
+      queryClient.clear();
+      setSession(null);
+      setLoading(false);
+    };
+
     // Mevcut oturumu kontrol et
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
-        console.log('Auth session error:', error.message);
-        supabase.auth.signOut().catch(() => {});
-        setSession(null);
-        setLoading(false);
+        // Geçersiz/süresi dolmuş refresh token — oturumu temizle, login'e yönlendir
+        console.log('Auth session error (token temizleniyor):', error.message);
+        clearStaleSession();
         return;
       }
       setSession(session);
@@ -59,18 +85,28 @@ function RootLayoutNav() {
         setLoading(false);
       }
     }).catch(err => {
-      console.log('getSession catch error:', err);
-      supabase.auth.signOut().catch(() => {});
-      setSession(null);
-      setLoading(false);
+      console.log('getSession catch error (token temizleniyor):', err?.message ?? err);
+      clearStaleSession();
     });
 
     // Auth durum değişikliklerini dinle
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_OUT' || !session) {
+        // SIGNED_OUT veya token yenileme hatası — cache temizle
+        if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !session) {
           queryClient.clear();
+          setSession(null);
+          setLoading(false);
+          return;
         }
+
+        if (!session) {
+          queryClient.clear();
+          setSession(null);
+          setLoading(false);
+          return;
+        }
+
         setSession(session);
         if (session?.user) {
           await fetchProfile(session.user.id);
@@ -91,7 +127,7 @@ function RootLayoutNav() {
   }, []);
 
   useEffect(() => {
-    if (isLoading) return;
+    if (isLoading || !splashReady) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const isOnboarding = segments[1] === 'onboarding';
@@ -106,7 +142,7 @@ function RootLayoutNav() {
         router.replace('/(app)');
       }
     }
-  }, [session, segments, isLoading, profile?.username]);
+  }, [session, segments, isLoading, profile?.username, splashReady]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

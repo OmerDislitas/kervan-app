@@ -2,23 +2,52 @@ import React from 'react';
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Typography, useThemeColors } from '@/constants/theme';
-import { Platform } from 'react-native';
+import { Platform, InteractionManager } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from '@/stores/authStore';
 import AppTourModal from '@/components/AppTourModal';
 import { useTourStore } from '@/stores/tourStore';
+import { fetchOrganizations, fetchActiveEventsCount } from './events/index';
+import { fetchDailyFacts } from './explore/index';
 
 export default function AppLayout() {
   const insets = useSafeAreaInsets();
   const { isAdmin } = useAuthStore();
   const themeColors = useThemeColors();
   const { showTour, setShowTour } = useTourStore();
+  const queryClient = useQueryClient();
+
+  // PERFORMANS (Faz 3): Giriş sonrası, ilk etkileşimler bittikten sonra Events ve
+  // Explore sekmelerinin verisini arka planda ısıt. Böylece o sekmeye İLK geçişte
+  // "yükleniyor" spinner'ı görünmez — veri zaten cache'tedir. Anahtarlar ekranlarla
+  // birebir aynı; aynı fetch fonksiyonları kullanılır (drift yok).
+  React.useEffect(() => {
+    const task = InteractionManager.runAfterInteractions(() => {
+      const today = new Date().toISOString().split('T')[0];
+      queryClient.prefetchQuery({ queryKey: ['organizations'], queryFn: fetchOrganizations });
+      queryClient.prefetchQuery({ queryKey: ['active-events-counts'], queryFn: fetchActiveEventsCount });
+      queryClient.prefetchQuery({ queryKey: ['daily-facts', today], queryFn: fetchDailyFacts });
+    });
+    return () => task.cancel();
+  }, [queryClient]);
 
   return (
     <>
       <Tabs
       screenOptions={{
         headerShown: false,
+        // PERFORMANS: Odakta olmayan tab ekranlarını dondur (react-native-screens).
+        // Arka plandaki ağır ekranların (özellikle Ana Sayfa) yeniden render
+        // olmasını ve interval/animasyonlarla JS thread'i meşgul etmesini
+        // engeller → tab geçişleri belirgin şekilde hızlanır.
+        freezeOnBlur: true,
+        // NOT: lazy:false (tüm panelleri girişte eager mount) bu iç içe stack
+        // navigasyon yapısında "Maximum update depth" döngüsü tetiklediği için
+        // KULLANILMIYOR. Ekranlar ilk ziyarette mount edilir (lazy=varsayılan).
+        // "Anında geçiş" hedefi freezeOnBlur + ekran-içi optimizasyon + veri
+        // prefetch (Faz 3) ile sağlanır.
+        lazy: true,
         tabBarStyle: {
           backgroundColor: themeColors.surface,
           borderTopColor: themeColors.border,

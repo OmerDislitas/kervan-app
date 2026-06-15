@@ -1,9 +1,13 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { supabase } from '@/lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSettingsStore } from '@/stores/settingsStore';
+
+/** Expo Go'da mı çalışıyor? (SDK 53+ Android push desteği kaldırıldı) */
+const IS_EXPO_GO = Constants.appOwnership === 'expo';
 
 const NOTIF_STORAGE_KEY = '@kervan_notifications';
 
@@ -72,18 +76,22 @@ export async function requestPermissions(): Promise<boolean> {
  * Expo Go / development build'de projectId olmadığında sessizce atlanır.
  */
 export async function registerPushToken(userId: string): Promise<void> {
+  // Expo Go'da SDK 53+ Android push notification desteği kaldırıldı — sessizce atla
+  if (IS_EXPO_GO) {
+    console.log('[Notifications] Expo Go ortamı: Push token kaydı atlandı (development build gerekli).');
+    return;
+  }
+
   try {
     if (!Device.isDevice) return;
 
     let token: string | null = null;
 
     try {
-      // Expo Go'da projectId yoksa bu başarısız olur — sorun değil
       const tokenData = await Notifications.getExpoPushTokenAsync();
       token = tokenData.data;
     } catch {
-      // Development/Expo Go ortamında normal — local notifications yine çalışır
-      console.log('[Notifications] Push token alınamadı (Expo Go/dev ortamı — normal).');
+      console.log('[Notifications] Push token alınamadı (dev ortamı — normal).');
       return;
     }
 
@@ -229,12 +237,11 @@ export async function scheduleWeeklyFridayMessage(): Promise<void> {
         data: { type: 'friday-message' }
       },
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
         weekday: 6, // 1=Pazar, 6=Cuma (Expo index)
         hour: 9,
         minute: 0,
-        repeats: true,
-      } as any,
+      },
     });
     
     console.log('[Notifications] Haftalık Cuma mesajı planlandı (Her Cuma 09:00).');
@@ -354,11 +361,10 @@ export async function scheduleDailyCompass(): Promise<void> {
         data: { type: 'daily-compass' }
       },
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
         hour: 12,
         minute: 0,
-        repeats: true,
-      } as any,
+      },
     });
     
     console.log('[Notifications] Günlük pusula bildirimi planlandı (Her gün 12:00).');
@@ -388,11 +394,10 @@ export async function scheduleDailyFactsNotification(): Promise<void> {
         data: { type: 'daily-facts', screen: 'explore' },
       },
       trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.CALENDAR,
+        type: Notifications.SchedulableTriggerInputTypes.DAILY,
         hour: 17,
         minute: 0,
-        repeats: true,
-      } as any,
+      },
     });
 
     console.log('[Notifications] Günlük hap bilgileri bildirimi planlandı (Her gün 17:00).');
@@ -403,52 +408,43 @@ export async function scheduleDailyFactsNotification(): Promise<void> {
 
 /**
  * Bir kullanıcıya anlık bildirim (push notification) gönderir.
+ *
+ * GÜVENLİK: Push token'lar artık istemciye açılmıyor (PII/token hasadı
+ * koruması — bkz. supabase/security_fixes.sql K-2/Y-2). Gönderim,
+ * service_role ile token'ı sunucuda okuyan ve başlık/gövdeyi SABİT
+ * şablonlardan üreten 'send-notification' Edge Function'ı üzerinden yapılır.
+ *
+ * Not: `title`/`body` parametreleri geriye dönük uyumluluk için korunuyor
+ * ancak ARTIK KULLANILMIYOR — içerik sunucudaki `data.type` şablonundan gelir.
  */
 export async function sendPushNotification(
   targetUserId: string,
-  title: string,
-  body: string,
-  data: any = {}
+  _title: string,
+  _body: string,
+  data: { type?: string; [key: string]: any } = {}
 ): Promise<void> {
   try {
-    // 1) Hedef kullanıcının push token'ını al
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('push_token')
-      .eq('id', targetUserId)
-      .single();
-
-    if (error || !profile?.push_token) {
-      console.log(`[Notifications] Token bulunamadı veya kullanıcı bildirimleri kapalı: ${targetUserId}`);
+    const type = data?.type;
+    if (!type) {
+      console.warn('[Notifications] sendPushNotification: data.type eksik, gönderim atlandı.');
       return;
     }
 
-    // 2) Expo Push API'sine isteği gönder
-    const message = {
-      to: profile.push_token,
-      sound: 'default',
-      title,
-      body,
-      data,
-    };
-
-    const response = await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Accept-encoding': 'gzip, deflate',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(message),
+    const { type: _t, ...extra } = data;
+    const { error } = await supabase.functions.invoke('send-notification', {
+      body: { targetUserId, type, data: extra },
     });
 
-    if (!response.ok) {
-      console.error('[Notifications] Expo Push API hatası:', await response.text());
+    // Bildirim "best-effort"tür: başarısız olması ana akışı (takip/yorum/beğeni)
+    // etkilemez. Bu yüzden console.error DEĞİL console.log kullanılır —
+    // aksi halde Metro bunu kırmızı hata kutusu olarak gösterir.
+    if (error) {
+      console.log('[Notifications] send-notification gönderilemedi (yok sayıldı):', error.message);
     } else {
-      console.log(`[Notifications] Bildirim başarıyla gönderildi: ${targetUserId}`);
+      console.log(`[Notifications] Bildirim isteği gönderildi: ${targetUserId} (${type})`);
     }
-  } catch (err) {
-    console.error('[Notifications] sendPushNotification hatası:', err);
+  } catch (err: any) {
+    console.log('[Notifications] sendPushNotification atlandı:', err?.message ?? err);
   }
 }
 

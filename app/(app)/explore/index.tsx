@@ -15,12 +15,14 @@ import {
   Pressable,
   ActivityIndicator,
   RefreshControl,
+  Alert,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Typography, Spacing, BorderRadius, useThemeColors } from '@/constants/theme';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { QUICK_FACTS } from '@/constants/facts';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -31,6 +33,48 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 // --- DATA ---
 
 const STORY_DURATION = 15000; // 15 seconds
+
+// PERFORMANS: Statik görev havuzu — render gövdesinden modül seviyesine taşındı
+// (her render'da yeniden oluşturulmasın).
+const IN_APP_TASKS = [
+  { id: '1', title: 'Tartışmaya Katıl', desc: 'Söz Sende paneline git ve aktif bir soruya yorum yaz.', icon: 'chatbubbles' },
+  { id: '2', title: 'Bilgi Avcısı', desc: 'Keşfet\'teki günün hap bilgilerinden birine tıkla ve sonuna kadar oku.', icon: 'book' },
+  { id: '3', title: 'Topluluk Desteği', desc: 'Söz Sende panelinde hoşuna giden 3 farklı yoruma beğeni bırak.', icon: 'heart' },
+  { id: '4', title: 'Profilini Güçlendir', desc: 'Profiline git, rozetlerini ve istatistiklerini kontrol et.', icon: 'person' },
+  { id: '5', title: 'Günün Sözünü Oku', desc: 'Keşfet ekranındaki "Günün Sözü" yuvarlağına tıkla ve günün ilhamını al.', icon: 'book-outline' },
+  { id: '6', title: 'Yeni Bağlantı Kur', desc: 'Profil sekmesine git ve tanıdığın birinin profilini ziyaret edip takip et.', icon: 'people' },
+  { id: '7', title: 'Gündem Yorumcusu', desc: 'Keşfet\'teki Gündem bölümünde aktif bir konuya yorum bırak.', icon: 'trending-up' },
+  { id: '8', title: 'Hap Bilgi Okuyucusu', desc: 'Bugünün iki hap bilgisini de oku ve yeni bir şeyler öğren.', icon: 'bulb' },
+];
+
+// Modül seviyesinde isimli fonksiyon → hem ekranda hem de prefetch (AppLayout)
+// tarafında AYNI fonksiyon kullanılır (key/şema drift'i olmaz).
+export async function fetchDailyFacts() {
+  const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const { data, error } = await supabase
+    .from('daily_facts')
+    .select('facts')
+    .eq('fact_date', todayStr)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Supabase daily_facts fetch error:', error);
+    return null;
+  }
+  if (!data?.facts) {
+    console.warn('Supabase daily_facts: No facts found for today:', todayStr);
+    return null;
+  }
+
+  return (data.facts as any[]).map((f: any, idx: number) => ({
+    id: String(f.id || idx + 1),
+    title: f.title,
+    desc: f.desc || f.description,
+    category: f.category,
+    image: f.image || f.image_url,
+    color: f.color,
+  }));
+}
 
 // STORIES_DATA is now dynamically built inside the component as storiesData
 
@@ -57,33 +101,7 @@ export default function ExploreScreen() {
   // ─── Supabase'den Günlük Hap Bilgileri ───────────────────────────────────
   const { data: supabaseDailyFacts, isLoading: isFactsLoading, refetch: refetchFacts } = useQuery({
     queryKey: ['daily-facts', new Date().toISOString().split('T')[0]],
-    queryFn: async () => {
-      const todayStr = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
-      const { data, error } = await supabase
-        .from('daily_facts')
-        .select('facts')
-        .eq('fact_date', todayStr)
-        .maybeSingle();
-
-      if (error) {
-        console.error('Supabase daily_facts fetch error:', error);
-        return null;
-      }
-      if (!data?.facts) {
-        console.warn('Supabase daily_facts: No facts found for today:', todayStr);
-        return null;
-      }
-
-      // JSON'dan gelen veriyi QuickFact formatına dönüştür
-      return (data.facts as any[]).map((f: any, idx: number) => ({
-        id: String(f.id || idx + 1),
-        title: f.title,
-        desc: f.desc || f.description,
-        category: f.category,
-        image: f.image || f.image_url,
-        color: f.color,
-      }));
-    },
+    queryFn: fetchDailyFacts,
     staleTime: 1000 * 60 * 30, // 30 dakika cache
     retry: 1,
   });
@@ -554,18 +572,6 @@ export default function ExploreScreen() {
   const [isTaskCompleted, setIsTaskCompleted] = useState(false);
   const [cooldownTime, setCooldownTime] = useState<string | null>(null);
 
-  const IN_APP_TASKS = [
-    { id: '1', title: 'Tartışmaya Katıl', desc: 'Söz Sende paneline git ve aktif bir soruya yorum yaz.', icon: 'chatbubbles' },
-    { id: '2', title: 'Bilgi Avcısı', desc: 'Keşfet\'teki günün hap bilgilerinden birine tıkla ve sonuna kadar oku.', icon: 'book' },
-    { id: '3', title: 'Topluluk Desteği', desc: 'Söz Sende panelinde hoşuna giden 3 farklı yoruma beğeni bırak.', icon: 'heart' },
-    { id: '4', title: 'Profilini Güçlendir', desc: 'Profiline git, rozetlerini ve istatistiklerini kontrol et.', icon: 'person' },
-    { id: '5', title: 'Günün Sözünü Oku', desc: 'Keşfet ekranındaki "Günün Sözü" yuvarlağına tıkla ve günün ilhamını al.', icon: 'book-outline' },
-    { id: '6', title: 'Yeni Bağlantı Kur', desc: 'Profil sekmesine git ve tanıdığın birinin profilini ziyaret edip takip et.', icon: 'people' },
-    { id: '7', title: 'Gündem Yorumcusu', desc: 'Keşfet\'teki Gündem bölümünde aktif bir konuya yorum bırak.', icon: 'trending-up' },
-    { id: '8', title: 'Hap Bilgi Okuyucusu', desc: 'Bugünün iki hap bilgisini de oku ve yeni bir şeyler öğren.', icon: 'bulb' },
-  ];
-
-
   const COOLDOWN_HOURS = 12;
 
   const loadDailyTask = async () => {
@@ -600,14 +606,19 @@ export default function ExploreScreen() {
     }
   };
 
-  useEffect(() => {
-    loadDailyTask();
-    const interval = setInterval(() => {
+  // PERFORMANS (Faz 4): useIsFocused yerine useFocusEffect. useIsFocused odak
+  // değişiminde bu 1700+ satırlık ekranı tamamen yeniden render edip sekme geçişini
+  // kekeletiyordu. useFocusEffect render tetiklemeden odak/blur'da çalışır.
+  useFocusEffect(
+    React.useCallback(() => {
       loadDailyTask();
-    }, 60000); // Her dakika sureyi guncelle
-    AsyncStorage.setItem('@kervan_last_explore_view', Date.now().toString()).catch(() => {});
-    return () => clearInterval(interval);
-  }, []);
+      const interval = setInterval(() => {
+        loadDailyTask();
+      }, 60000); // Her dakika sureyi guncelle
+      AsyncStorage.setItem('@kervan_last_explore_view', Date.now().toString()).catch(() => {});
+      return () => clearInterval(interval);
+    }, [])
+  );
 
   const spinCompass = () => {
     if (isSpinning) return;

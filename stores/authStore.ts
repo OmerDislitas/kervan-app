@@ -90,10 +90,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         await AsyncStorage.setItem('@kervan_last_logged_in_user', userId);
       }
 
+      // Kendi tam profilini (email/phone/push_token dahil) SECURITY DEFINER
+      // RPC üzerinden oku. Bu sütunlar artık doğrudan SELECT ile okunamıyor
+      // (PII sızıntısı koruması — bkz. supabase/security_fixes.sql K-2).
       let { data, error } = await supabase
-        .from('profiles')
-        .select('id, email, full_name, username, phone, university_id, university_name, department, university_year, gender, role, push_token, points, is_private, bio')
-        .eq('id', userId)
+        .rpc('get_my_profile')
         .single();
 
       if (error && error.code === 'PGRST116') {
@@ -119,9 +120,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           });
 
           const { data: newData, error: newError } = await supabase
-            .from('profiles')
-            .select('id, email, full_name, username, phone, university_id, university_name, department, university_year, gender, role, push_token, points, is_private, bio')
-            .eq('id', userId)
+            .rpc('get_my_profile')
             .single();
 
           data = newData;
@@ -133,9 +132,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (error) throw error;
 
+      const prof = data as UserProfile;
       set({
-        profile: data as UserProfile,
-        isAdmin: data.role === 'admin',
+        profile: prof,
+        isAdmin: prof?.role === 'admin',
       });
     } catch (err) {
       console.error('[authStore] fetchProfile error:', err);

@@ -9,9 +9,9 @@
     "newArchEnabled": true,
     "scheme": "kervan",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#0F1923"
+      "backgroundColor": "#FFFFFF"
     },
     "ios": {
       "supportsTablet": false,
@@ -58,8 +58,10 @@
     },
     "extra": {
       "eas": {
-        "projectId": "BURAYA_EAS_PROJECT_ID_GIRINIZ"
-      }
-    }
+        "projectId": "708f3c3e-81b1-457a-9a0a-2470da35e516"
+      },
+      "router": {}
+    },
+    "owner": "omerdislitas"
   }
 }

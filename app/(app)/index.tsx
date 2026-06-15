@@ -19,6 +19,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useQuery } from '@tanstack/react-query';
@@ -38,6 +39,151 @@ import {
 } from '@/lib/notificationService';
 import { useTourStore } from '@/stores/tourStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+
+// PERFORMANS: Bu sabit diziler eskiden render gövdesindeydi ve her render'da
+// yeniden oluşturuluyordu (gereksiz allocation). Modül seviyesine taşındı —
+// uygulama ömrü boyunca bir kez oluşturulur.
+const HOME_COMPASS_TASKS = [
+  { id: 'h1', title: 'Tartışmaya Katıl', desc: 'Söz Sende paneline git ve aktif bir soruya yorum yaz.', icon: 'chatbubbles', color: '#8A2BE2' },
+  { id: 'h2', title: 'Bilgi Avcısı', desc: 'Keşfet\'teki günün hap bilgilerinden birine tıkla ve sonuna kadar oku.', icon: 'book', color: '#4D96FF' },
+  { id: 'h3', title: 'Topluluk Desteği', desc: 'Söz Sende panelinde hoşuna giden 3 farklı yoruma beğeni bırak.', icon: 'heart', color: '#FF6B6B' },
+  { id: 'h4', title: 'Profilini Güçlendir', desc: 'Profiline git, rozetlerini ve istatistiklerini kontrol et.', icon: 'person', color: '#E0144C' },
+  { id: 'h5', title: 'Günün Sözünü Oku', desc: 'Keşfet ekranındaki "Günün Sözü" yuvarlağına tıkla ve günün ilhamını al.', icon: 'book-outline', color: '#A78BFA' },
+  { id: 'h6', title: 'Yeni Bağlantı Kur', desc: 'Profil sekmesine git ve tanıdığın birinin profilini ziyaret edip takip et.', icon: 'people', color: '#00C9A7' },
+  { id: 'h7', title: 'Gündem Yorumcusu', desc: 'Keşfet\'teki Gündem bölümünde aktif bir konuya yorum bırak.', icon: 'trending-up', color: '#1A5D1A' },
+  { id: 'h8', title: 'Hap Bilgi Okuyucusu', desc: 'Bugünün iki hap bilgisini de oku ve yeni bir şeyler öğren.', icon: 'bulb', color: '#610C9F' },
+];
+
+const HOME_WISDOM_POOL = [
+  { text: "Birlikte yola çıkmak bir başlangıçtır, bir arada kalmak ilerlemedir, birlikte çalışmak ise başarıdır.", author: "Henry Ford" },
+  { text: "İyilik yap, denize at; balık bilmezse Halik bilir.", author: "Anonim" },
+  { text: "Gençlik, geleceğin tohumudur; onu sevgi ve bilgiyle sula.", author: "Kervan" },
+  { text: "Yol seni nereye götürüyorsa oraya gitme, yol olmayan yerden git ki iz bırak.", author: "R.W. Emerson" },
+  { text: "En büyük başarı, hiçbir zaman düşmemekte değil, her düştüğünde tekrar ayağa kalkabilmektedir.", author: "Konfüçyüs" },
+  { text: "Bilgi ışık gibidir; paylaştıkça çoğalır.", author: "Mevlana" },
+  { text: "Sabır acıdır, ama meyvesi tatlıdır.", author: "Sa'dî" },
+  { text: "Düşüncelerinde büyük ol, hayallerinde cesur, eylemlerinde kararlı.", author: "Thomas J. Watson" },
+  { text: "Başkalarına hizmet etmek, yeryüzünde sürdüğünüz kiranın bedelidir.", author: "Muhammad Ali" },
+  { text: "Küçük adımlar büyük yolculukların başlangıcıdır.", author: "Lao Tzu" },
+  { text: "İnsanın en güzel yolculuğu kendi içine yaptığı yolculuktur.", author: "Rumi" },
+  { text: "Dünyanı değiştirmek istiyorsan önce kendini değiştir.", author: "Mahatma Gandhi" },
+  { text: "Bir ağaç dikmenin en iyi zamanı yirmi yıl önceydi; ikinci en iyi zaman şimdi.", author: "Çin Atasözü" },
+  { text: "Başarının sırrı; başlamaktır.", author: "Mark Twain" },
+  { text: "Azimli bir insan için imkânsız diye bir şey yoktur.", author: "Aleksander Büyük" },
+  { text: "Bilgelik, deneyimden öğrenilen bilgidir.", author: "Oscar Wilde" },
+  { text: "Yüce hedefler, sıradan insanları olağanüstü kılar.", author: "John D. Rockefeller" },
+  { text: "Her zorluk, yeni bir fırsatın kapısını aralar.", author: "Albert Einstein" },
+  { text: "İnsanlar yapabileceğini düşündükleri şeyi değil, istediklerini başarırlar.", author: "Vince Lombardi" },
+  { text: "Karanlıkta bir mum yakmak, karanlığa küsmekten iyidir.", author: "Konfüçyüs" },
+  { text: "Kendinize inandığınızda başkalarını da inandırabilirsiniz.", author: "Zig Ziglar" },
+  { text: "Bir toplumun geleceği gençlerin elindedir; onlara güvenin ve yol gösterin.", author: "Atatürk" },
+  { text: "Öğrenmek bir hazinedir, onu taşıyan her yere gider.", author: "Çin Atasözü" },
+  { text: "Sevgi vermek, sevgi almaktır.", author: "Fyodor Dostoyevski" },
+  { text: "Adalet, güçlünün zayıfa merhameti değil, herkesin hakkının korunmasıdır.", author: "Platon" },
+  { text: "Umut etmek, yaşamaya devam etmektir.", author: "Victor Hugo" },
+  { text: "İyi bir kitap yüz arkadaşa bedeldir.", author: "A.P.J. Abdul Kalam" },
+  { text: "Gülümsemek, insanlar arasındaki en kısa mesafedir.", author: "Victor Borge" },
+  { text: "Birlik güçtür; birlikte hiçbir şey imkânsız değildir.", author: "Walton Family" },
+  { text: "Dürüstlük, en iyi politikadır.", author: "Benjamin Franklin" },
+];
+
+const HISTORICAL_EVENTS_POOL = [
+  [
+    { title: "Fetih Hazırlıkları", detail: "Fatih Sultan Mehmet kuşatma planlarını inceledi." },
+    { title: "Gülhane Hatt-ı Hümayunu", detail: "Tanzimat Fermanı ilan edildi." },
+    { title: "Kervan Vizyon", detail: "Platformun ilk temelleri atıldı." }
+  ],
+  [
+    { title: "Mescid-i Aksa", detail: "Kudüs'te önemli tarihi gelişmeler yaşandı." },
+    { title: "Mimar Sinan", detail: "Süleymaniye Camii inşaatı devam ediyordu." },
+    { title: "Bilgi Hikmet", detail: "Gençlik buluşmaları organize edildi." }
+  ],
+  [
+    { title: "İlim Meclisleri", detail: "Semerkand'da büyük alimler toplandı." },
+    { title: "Endülüs Mirası", detail: "Kurtuba Kütüphanesi genişletildi." },
+    { title: "Gelecek Tasavvuru", detail: "Gençler için yeni projeler açıklandı." }
+  ]
+];
+
+// PERFORMANS: "Söz Sende" carousel'i kendi state'ini (questionIndex + animasyon)
+// yöneten ayrı, memo'lu bir bileşendir. Eskiden bu state ana ekrandaydı ve 5
+// saniyede bir 2200+ satırlık ekranın tamamını yeniden render ediyordu. Artık
+// yalnızca bu kart yeniden render olur. Ayrıca ekran odakta değilken interval
+// durur (useIsFocused) → arka plan tab'ı CPU/pil yemez.
+type HomeQuestion = { id: string; title: string };
+const QuestionOfTheWeek = React.memo(function QuestionOfTheWeek({
+  questions,
+  styles,
+  themeColors,
+  onPressQuestion,
+}: {
+  questions: HomeQuestion[] | undefined;
+  styles: any;
+  themeColors: any;
+  onPressQuestion: (id: string) => void;
+}) {
+  const [questionIndex, setQuestionIndex] = React.useState(0);
+  const fadeAnim = React.useRef(new Animated.Value(1)).current;
+  const translateYAnim = React.useRef(new Animated.Value(0)).current;
+
+  // PERFORMANS (Faz 4): useIsFocused yerine useFocusEffect. useIsFocused odak
+  // değişiminde bileşeni YENİDEN RENDER eder; useFocusEffect ise yalnızca effect'i
+  // odak/blur'da çalıştırır, render tetiklemez → sekme geçişinde gereksiz render yok.
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!questions || questions.length <= 1) return;
+      const interval = setInterval(() => {
+        Animated.parallel([
+          Animated.timing(fadeAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+          Animated.timing(translateYAnim, { toValue: -10, duration: 400, useNativeDriver: true }),
+        ]).start(() => {
+          setQuestionIndex((prev) => (prev + 1) % questions.length);
+          translateYAnim.setValue(10);
+          Animated.parallel([
+            Animated.timing(fadeAnim, { toValue: 1, duration: 400, useNativeDriver: true }),
+            Animated.timing(translateYAnim, { toValue: 0, duration: 400, useNativeDriver: true }),
+          ]).start();
+        });
+      }, 5000);
+      return () => clearInterval(interval);
+    }, [questions, fadeAnim, translateYAnim])
+  );
+
+  const activeQuestion = questions?.[questionIndex];
+  if (!activeQuestion) return null;
+
+  return (
+    <TouchableOpacity
+      style={[styles.questionOfTheWeekCard, styles.premiumShadow]}
+      activeOpacity={0.9}
+      onPress={() => onPressQuestion(activeQuestion.id)}
+    >
+      <LinearGradient colors={[themeColors.surface, themeColors.surfaceLight]} style={styles.qowContent}>
+        <View style={styles.qowGlow} />
+        <View style={styles.qowHeader}>
+          <View style={styles.qowBadge}>
+            <Ionicons name="chatbubbles" size={14} color={themeColors.surface} />
+            <Text style={styles.qowBadgeText}>Söz Sende</Text>
+          </View>
+          {questions && questions.length > 1 && (
+            <View style={styles.qowPagination}>
+              {questions.map((_, idx) => (
+                <View key={idx} style={[styles.qowDot, idx === questionIndex && styles.qowDotActive]} />
+              ))}
+            </View>
+          )}
+          <Ionicons name="chevron-forward" size={18} color={themeColors.primary} />
+        </View>
+        <View style={{ minHeight: 70, justifyContent: 'center' }}>
+          <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: translateYAnim }] }}>
+            <Text style={styles.qowTitle} numberOfLines={2}>{activeQuestion.title}</Text>
+            <Text style={styles.qowSubtitle}>Toplulukla tartışmaya katıl, fikrini paylaş.</Text>
+          </Animated.View>
+        </View>
+      </LinearGradient>
+    </TouchableOpacity>
+  );
+});
 
 async function fetchMyNextEvent(userId: string) {
   const { data: regs, error: regError } = await supabase
@@ -216,16 +362,12 @@ export default function HomeScreen() {
     },
   });
 
-  const [questionIndex, setQuestionIndex] = React.useState(0);
-  const fadeAnim = React.useRef(new Animated.Value(1)).current;
-  const translateYAnim = React.useRef(new Animated.Value(0)).current;
-
   const [refreshing, setRefreshing] = React.useState(false);
 
   const handleRefresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
-      const promises = [
+      const promises: Promise<unknown>[] = [
         refetchUpcomingEvents(),
         refetchQuestions(),
         refetchRanking()
@@ -250,17 +392,6 @@ export default function HomeScreen() {
   const [homeCooldown, setHomeCooldown] = React.useState<string | null>(null);
   const [earnedCompassPoints, setEarnedCompassPoints] = React.useState(false);
   const COMPASS_POINTS = 25;
-
-  const HOME_COMPASS_TASKS = [
-    { id: 'h1', title: 'Tartışmaya Katıl', desc: 'Söz Sende paneline git ve aktif bir soruya yorum yaz.', icon: 'chatbubbles', color: '#8A2BE2' },
-    { id: 'h2', title: 'Bilgi Avcısı', desc: 'Keşfet\'teki günün hap bilgilerinden birine tıkla ve sonuna kadar oku.', icon: 'book', color: '#4D96FF' },
-    { id: 'h3', title: 'Topluluk Desteği', desc: 'Söz Sende panelinde hoşuna giden 3 farklı yoruma beğeni bırak.', icon: 'heart', color: '#FF6B6B' },
-    { id: 'h4', title: 'Profilini Güçlendir', desc: 'Profiline git, rozetlerini ve istatistiklerini kontrol et.', icon: 'person', color: '#E0144C' },
-    { id: 'h5', title: 'Günün Sözünü Oku', desc: 'Keşfet ekranındaki "Günün Sözü" yuvarlağına tıkla ve günün ilhamını al.', icon: 'book-outline', color: '#A78BFA' },
-    { id: 'h6', title: 'Yeni Bağlantı Kur', desc: 'Profil sekmesine git ve tanıdığın birinin profilini ziyaret edip takip et.', icon: 'people', color: '#00C9A7' },
-    { id: 'h7', title: 'Gündem Yorumcusu', desc: 'Keşfet\'teki Gündem bölümünde aktif bir konuya yorum bırak.', icon: 'trending-up', color: '#1A5D1A' },
-    { id: 'h8', title: 'Hap Bilgi Okuyucusu', desc: 'Bugünün iki hap bilgisini de oku ve yeni bir şeyler öğren.', icon: 'bulb', color: '#610C9F' },
-  ];
 
   const loadHomeCompassTask = React.useCallback(async () => {
     try {
@@ -322,11 +453,18 @@ export default function HomeScreen() {
     }
   }, []);
 
-  React.useEffect(() => {
-    loadHomeCompassTask();
-    const interval = setInterval(loadHomeCompassTask, 60000);
-    return () => clearInterval(interval);
-  }, [loadHomeCompassTask]);
+  // PERFORMANS (Faz 4): Pusula durumunu yalnızca ekran odaktayken yenile. Eskiden
+  // burada üst seviye useIsFocused vardı; o her odak değişiminde 2247 satırlık bu
+  // ekranı tamamen yeniden render edip sekme geçiş animasyonunu kekeletiyordu.
+  // useFocusEffect render tetiklemeden odak/blur'da çalışır. Sekmeye dönünce hemen
+  // bir kez yenilenir (cooldown güncel kalır), blur'da timer durur (pil/CPU dostu).
+  useFocusEffect(
+    React.useCallback(() => {
+      loadHomeCompassTask();
+      const interval = setInterval(loadHomeCompassTask, 60000);
+      return () => clearInterval(interval);
+    }, [loadHomeCompassTask])
+  );
 
   const homeSpinCompass = () => {
     if (homeIsSpinning) return;
@@ -586,26 +724,22 @@ export default function HomeScreen() {
 
     if (profile?.id) {
       try {
-        const { data: current } = await supabase
-          .from('profiles')
-          .select('points')
-          .eq('id', profile.id)
-          .single();
-        const newPoints = (current?.points || 0) + COMPASS_POINTS;
-        
-        const { error: updateError } = await supabase
-          .from('profiles')
-          .update({ points: newPoints })
-          .eq('id', profile.id);
-        
-        if (!updateError) {
+        // Puan SUNUCU tarafında, günde bir kez verilir (güvenlik: istemci
+        // 'points' sütununu doğrudan değiştiremez — bkz. security_fixes.sql).
+        const { data, error: rpcError } = await supabase.rpc('claim_compass_reward');
+
+        if (!rpcError && data) {
+          const result = data as { success: boolean; already_claimed?: boolean; points: number };
+          // Sunucudan dönen güncel puanı store'a yansıt.
           useAuthStore.setState({
-            profile: {
-              ...profile,
-              points: newPoints
-            }
+            profile: { ...profile, points: result.points },
           });
           await fetchProfile(profile.id);
+
+          if (result.already_claimed) {
+            Alert.alert('Görev Tamamlandı 🧭', 'Bugünün pusula ödülünü zaten almıştın. Yarın tekrar bekleriz!');
+            return;
+          }
         }
       } catch (e) {
         console.log('Puan güncelleme hatası', e);
@@ -615,43 +749,6 @@ export default function HomeScreen() {
   };
 
   const homeSpinRotation = compassAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '1080deg'] });
-
-  React.useEffect(() => {
-    if (activeQuestions && activeQuestions.length > 1) {
-      const interval = setInterval(() => {
-        Animated.parallel([
-          Animated.timing(fadeAnim, {
-            toValue: 0,
-            duration: 400,
-            useNativeDriver: true,
-          }),
-          Animated.timing(translateYAnim, {
-            toValue: -10,
-            duration: 400,
-            useNativeDriver: true,
-          })
-        ]).start(() => {
-          setQuestionIndex((prev) => (prev + 1) % activeQuestions.length);
-          translateYAnim.setValue(10);
-          Animated.parallel([
-            Animated.timing(fadeAnim, {
-              toValue: 1,
-              duration: 400,
-              useNativeDriver: true,
-            }),
-            Animated.timing(translateYAnim, {
-              toValue: 0,
-              duration: 400,
-              useNativeDriver: true,
-            })
-          ]).start();
-        });
-      }, 5000);
-      return () => clearInterval(interval);
-    }
-  }, [activeQuestions, fadeAnim, translateYAnim]);
-
-  const activeQuestion = activeQuestions?.[questionIndex];
 
   const isFriday = new Date().getDay() === 5;
 
@@ -665,58 +762,10 @@ export default function HomeScreen() {
   const userInitial = profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'K';
 
   // Epoch-gün indeksi: notificationService.ts ile aynı mantık — her gün farklı söz
-  const HOME_WISDOM_POOL = [
-    { text: "Birlikte yola çıkmak bir başlangıçtır, bir arada kalmak ilerlemedir, birlikte çalışmak ise başarıdır.", author: "Henry Ford" },
-    { text: "İyilik yap, denize at; balık bilmezse Halik bilir.", author: "Anonim" },
-    { text: "Gençlik, geleceğin tohumudur; onu sevgi ve bilgiyle sula.", author: "Kervan" },
-    { text: "Yol seni nereye götürüyorsa oraya gitme, yol olmayan yerden git ki iz bırak.", author: "R.W. Emerson" },
-    { text: "En büyük başarı, hiçbir zaman düşmemekte değil, her düştüğünde tekrar ayağa kalkabilmektedir.", author: "Konfüçyüs" },
-    { text: "Bilgi ışık gibidir; paylaştıkça çoğalır.", author: "Mevlana" },
-    { text: "Sabır acıdır, ama meyvesi tatlıdır.", author: "Sa'dî" },
-    { text: "Düşüncelerinde büyük ol, hayallerinde cesur, eylemlerinde kararlı.", author: "Thomas J. Watson" },
-    { text: "Başkalarına hizmet etmek, yeryüzünde sürdüğünüz kiranın bedelidir.", author: "Muhammad Ali" },
-    { text: "Küçük adımlar büyük yolculukların başlangıcıdır.", author: "Lao Tzu" },
-    { text: "İnsanın en güzel yolculuğu kendi içine yaptığı yolculuktur.", author: "Rumi" },
-    { text: "Dünyanı değiştirmek istiyorsan önce kendini değiştir.", author: "Mahatma Gandhi" },
-    { text: "Bir ağaç dikmenin en iyi zamanı yirmi yıl önceydi; ikinci en iyi zaman şimdi.", author: "Çin Atasözü" },
-    { text: "Başarının sırrı; başlamaktır.", author: "Mark Twain" },
-    { text: "Azimli bir insan için imkânsız diye bir şey yoktur.", author: "Aleksander Büyük" },
-    { text: "Bilgelik, deneyimden öğrenilen bilgidir.", author: "Oscar Wilde" },
-    { text: "Yüce hedefler, sıradan insanları olağanüstü kılar.", author: "John D. Rockefeller" },
-    { text: "Her zorluk, yeni bir fırsatın kapısını aralar.", author: "Albert Einstein" },
-    { text: "İnsanlar yapabileceğini düşündükleri şeyi değil, istediklerini başarırlar.", author: "Vince Lombardi" },
-    { text: "Karanlıkta bir mum yakmak, karanlığa küsmekten iyidir.", author: "Konfüçyüs" },
-    { text: "Kendinize inandığınızda başkalarını da inandırabilirsiniz.", author: "Zig Ziglar" },
-    { text: "Bir toplumun geleceği gençlerin elindedir; onlara güvenin ve yol gösterin.", author: "Atatürk" },
-    { text: "Öğrenmek bir hazinedir, onu taşıyan her yere gider.", author: "Çin Atasözü" },
-    { text: "Sevgi vermek, sevgi almaktır.", author: "Fyodor Dostoyevski" },
-    { text: "Adalet, güçlünün zayıfa merhameti değil, herkesin hakkının korunmasıdır.", author: "Platon" },
-    { text: "Umut etmek, yaşamaya devam etmektir.", author: "Victor Hugo" },
-    { text: "İyi bir kitap yüz arkadaşa bedeldir.", author: "A.P.J. Abdul Kalam" },
-    { text: "Gülümsemek, insanlar arasındaki en kısa mesafedir.", author: "Victor Borge" },
-    { text: "Birlik güçtür; birlikte hiçbir şey imkânsız değildir.", author: "Walton Family" },
-    { text: "Dürüstlük, en iyi politikadır.", author: "Benjamin Franklin" },
-  ];
   const epochDay = Math.floor(Date.now() / (24 * 60 * 60 * 1000));
   const dailyWisdom = HOME_WISDOM_POOL[epochDay % HOME_WISDOM_POOL.length];
 
-  const historicalEvents = [
-    [
-      { title: "Fetih Hazırlıkları", detail: "Fatih Sultan Mehmet kuşatma planlarını inceledi." },
-      { title: "Gülhane Hatt-ı Hümayunu", detail: "Tanzimat Fermanı ilan edildi." },
-      { title: "Kervan Vizyon", detail: "Platformun ilk temelleri atıldı." }
-    ],
-    [
-      { title: "Mescid-i Aksa", detail: "Kudüs'te önemli tarihi gelişmeler yaşandı." },
-      { title: "Mimar Sinan", detail: "Süleymaniye Camii inşaatı devam ediyordu." },
-      { title: "Bilgi Hikmet", detail: "Gençlik buluşmaları organize edildi." }
-    ],
-    [
-      { title: "İlim Meclisleri", detail: "Semerkand'da büyük alimler toplandı." },
-      { title: "Endülüs Mirası", detail: "Kurtuba Kütüphanesi genişletildi." },
-      { title: "Gelecek Tasavvuru", detail: "Gençler için yeni projeler açıklandı." }
-    ]
-  ][new Date().getDate() % 3];
+  const historicalEvents = HISTORICAL_EVENTS_POOL[new Date().getDate() % 3];
 
   // Dinamik Tarih Mantığı
   const today = new Date();
@@ -802,51 +851,12 @@ export default function HomeScreen() {
         </ImageBackground>
 
         {/* Haftanın Sorusu (Söz Sende) - Hero'nun hemen altına */}
-        {activeQuestion && (
-          <TouchableOpacity 
-            style={[styles.questionOfTheWeekCard, styles.premiumShadow]}
-            activeOpacity={0.9}
-            onPress={() => router.push(`/(app)/soz-sende/${activeQuestion.id}`)}
-          >
-            <LinearGradient
-              colors={[themeColors.surface, themeColors.surfaceLight]}
-              style={styles.qowContent}
-            >
-              <View style={styles.qowGlow} />
-              <View style={styles.qowHeader}>
-                <View style={styles.qowBadge}>
-                  <Ionicons name="chatbubbles" size={14} color={themeColors.surface} />
-                  <Text style={styles.qowBadgeText}>Söz Sende</Text>
-                </View>
-                {activeQuestions && activeQuestions.length > 1 && (
-                  <View style={styles.qowPagination}>
-                    {activeQuestions.map((_, idx) => (
-                      <View 
-                        key={idx} 
-                        style={[
-                          styles.qowDot, 
-                          idx === questionIndex && styles.qowDotActive
-                        ]} 
-                      />
-                    ))}
-                  </View>
-                )}
-                <Ionicons name="chevron-forward" size={18} color={themeColors.primary} />
-              </View>
-              <View style={{ minHeight: 70, justifyContent: 'center' }}>
-                 <Animated.View 
-                   style={{ 
-                     opacity: fadeAnim,
-                     transform: [{ translateY: translateYAnim }]
-                   }}
-                 >
-                    <Text style={styles.qowTitle} numberOfLines={2}>{activeQuestion.title}</Text>
-                    <Text style={styles.qowSubtitle}>Toplulukla tartışmaya katıl, fikrini paylaş.</Text>
-                 </Animated.View>
-              </View>
-            </LinearGradient>
-          </TouchableOpacity>
-        )}
+        <QuestionOfTheWeek
+          questions={activeQuestions}
+          styles={styles}
+          themeColors={themeColors}
+          onPressQuestion={(qid) => router.push(`/(app)/soz-sende/${qid}`)}
+        />
 
         {/* Kervan Pusulası - Premium Kart */}
         <View style={[styles.homeCompassCard, styles.premiumShadow]}>
