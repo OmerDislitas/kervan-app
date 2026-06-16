@@ -31,24 +31,39 @@ export default function RegisterStep3() {
   const [accepted, setAccepted] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
 
+  const [errors, setErrors] = useState<{
+    email?: string;
+    password?: string;
+    passwordConfirm?: string;
+    accepted?: string;
+  }>({});
+
   const handleRegister = async () => {
+    const newErrors: typeof errors = {};
+
     if (!email.trim()) {
-      Alert.alert('Eksik Bilgi', 'Lütfen e-posta adresinizi girin.');
-      return;
+      newErrors.email = 'E-posta adresinizi girin.';
+    } else if (!/\S+@\S+\.\S+/.test(email.trim())) {
+      newErrors.email = 'Geçerli bir e-posta adresi girin.';
     }
     if (password.length < 6) {
-      Alert.alert('Zayıf Şifre', 'Şifreniz en az 6 karakter olmalıdır.');
-      return;
+      newErrors.password = 'Şifreniz en az 6 karakter olmalıdır.';
     }
-    if (password !== passwordConfirm) {
-      Alert.alert('Şifre Uyuşmuyor', 'Girdiğiniz şifreler eşleşmiyor.');
-      return;
+    if (!passwordConfirm) {
+      newErrors.passwordConfirm = 'Şifreyi tekrar girin.';
+    } else if (password !== passwordConfirm) {
+      newErrors.passwordConfirm = 'Şifreler eşleşmiyor.';
     }
     if (!accepted) {
-      Alert.alert('Kullanım Şartları', 'Kayıt olabilmek için Kullanım Şartları\'nı kabul etmeniz gerekmektedir.');
+      newErrors.accepted = 'Kullanım Şartları\'nı kabul etmeniz gerekiyor.';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
+    setErrors({});
     setLoading(true);
 
     try {
@@ -138,34 +153,51 @@ export default function RegisterStep3() {
 
         {/* E-posta */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>E-posta *</Text>
-          <View style={styles.inputWrapper}>
-            <Ionicons name="mail-outline" size={18} color={themeColors.textSecondary} style={styles.inputIcon} />
+          <Text style={[styles.label, errors.email && styles.labelError]}>E-posta *</Text>
+          <View style={[styles.inputWrapper, errors.email && styles.inputWrapperError]}>
+            <Ionicons
+              name="mail-outline"
+              size={18}
+              color={errors.email ? themeColors.error : themeColors.textSecondary}
+              style={styles.inputIcon}
+            />
             <TextInput
               style={styles.input}
               placeholder="ornek@email.com"
               placeholderTextColor={themeColors.textMuted}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(t) => {
+                setEmail(t);
+                if (errors.email) setErrors((e) => ({ ...e, email: undefined }));
+              }}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
               maxLength={50}
             />
           </View>
+          {errors.email && <Text style={styles.errorText}>{errors.email}</Text>}
         </View>
 
         {/* Şifre */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Şifre *</Text>
-          <View style={styles.inputWrapper}>
-            <Ionicons name="lock-closed-outline" size={18} color={themeColors.textSecondary} style={styles.inputIcon} />
+          <Text style={[styles.label, errors.password && styles.labelError]}>Şifre *</Text>
+          <View style={[styles.inputWrapper, errors.password && styles.inputWrapperError]}>
+            <Ionicons
+              name="lock-closed-outline"
+              size={18}
+              color={errors.password ? themeColors.error : themeColors.textSecondary}
+              style={styles.inputIcon}
+            />
             <TextInput
               style={[styles.input, styles.passwordInput]}
               placeholder="En az 6 karakter"
               placeholderTextColor={themeColors.textMuted}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={(t) => {
+                setPassword(t);
+                if (errors.password) setErrors((e) => ({ ...e, password: undefined }));
+              }}
               secureTextEntry={!showPassword}
               autoCapitalize="none"
             />
@@ -173,19 +205,33 @@ export default function RegisterStep3() {
               <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color={themeColors.textSecondary} />
             </TouchableOpacity>
           </View>
+          {errors.password && <Text style={styles.errorText}>{errors.password}</Text>}
         </View>
 
         {/* Şifre Tekrar */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Şifre Tekrar *</Text>
-          <View style={[styles.inputWrapper, passwordConfirm && password !== passwordConfirm && { borderColor: themeColors.error }]}>
-            <Ionicons name="lock-closed-outline" size={18} color={themeColors.textSecondary} style={styles.inputIcon} />
+          <Text style={[styles.label, errors.passwordConfirm && styles.labelError]}>Şifre Tekrar *</Text>
+          <View style={[
+            styles.inputWrapper,
+            errors.passwordConfirm
+              ? styles.inputWrapperError
+              : (passwordConfirm && password !== passwordConfirm ? { borderColor: themeColors.error } : null),
+          ]}>
+            <Ionicons
+              name="lock-closed-outline"
+              size={18}
+              color={errors.passwordConfirm ? themeColors.error : themeColors.textSecondary}
+              style={styles.inputIcon}
+            />
             <TextInput
               style={[styles.input, styles.passwordInput]}
               placeholder="Şifreyi tekrar girin"
               placeholderTextColor={themeColors.textMuted}
               value={passwordConfirm}
-              onChangeText={setPasswordConfirm}
+              onChangeText={(t) => {
+                setPasswordConfirm(t);
+                if (errors.passwordConfirm) setErrors((e) => ({ ...e, passwordConfirm: undefined }));
+              }}
               secureTextEntry={!showPasswordConfirm}
               autoCapitalize="none"
             />
@@ -193,31 +239,38 @@ export default function RegisterStep3() {
               <Ionicons name={showPasswordConfirm ? 'eye-off-outline' : 'eye-outline'} size={18} color={themeColors.textSecondary} />
             </TouchableOpacity>
           </View>
-          {passwordConfirm !== '' && password !== passwordConfirm && (
+          {errors.passwordConfirm && (
+            <Text style={styles.errorText}>{errors.passwordConfirm}</Text>
+          )}
+          {!errors.passwordConfirm && passwordConfirm !== '' && password !== passwordConfirm && (
             <Text style={styles.errorText}>Şifreler eşleşmiyor</Text>
           )}
         </View>
 
         {/* Şartlar ve Koşullar */}
-        <View style={styles.termsContainer}>
+        <View style={[styles.termsContainer, errors.accepted && styles.termsContainerError]}>
           <TouchableOpacity 
             style={styles.checkbox} 
-            onPress={() => setAccepted(!accepted)}
+            onPress={() => {
+              setAccepted(!accepted);
+              if (errors.accepted) setErrors((e) => ({ ...e, accepted: undefined }));
+            }}
             activeOpacity={0.7}
           >
             <Ionicons 
               name={accepted ? "checkbox" : "square-outline"} 
               size={20} 
-              color={accepted ? themeColors.primary : themeColors.textSecondary} 
+              color={errors.accepted ? themeColors.error : (accepted ? themeColors.primary : themeColors.textSecondary)} 
             />
           </TouchableOpacity>
-          <Text style={styles.termsText}>
+          <Text style={[styles.termsText, errors.accepted && { color: themeColors.error }]}>
             <Text style={styles.termsLink} onPress={() => setShowTermsModal(true)}>
               Kullanım Şartları
             </Text>
             'nı okudum ve kabul ediyorum.
           </Text>
         </View>
+        {errors.accepted && <Text style={[styles.errorText, { marginTop: 4 }]}>{errors.accepted}</Text>}
 
         <TouchableOpacity
           style={[styles.nextButton, loading && styles.buttonDisabled]}
@@ -275,6 +328,7 @@ export default function RegisterStep3() {
               style={styles.modalAcceptButton} 
               onPress={() => {
                 setAccepted(true);
+                setErrors((e) => ({ ...e, accepted: undefined }));
                 setShowTermsModal(false);
               }}
             >
@@ -318,12 +372,14 @@ const createStyles = (themeColors: any) => StyleSheet.create({
   stepSubtitle: { fontSize: Typography.fontSize.md, color: themeColors.textSecondary, marginBottom: Spacing.xl, lineHeight: 22 },
   inputGroup: { marginBottom: Spacing.md },
   label: { fontSize: Typography.fontSize.sm, color: themeColors.textSecondary, marginBottom: Spacing.xs, fontWeight: '500' },
+  labelError: { color: themeColors.error },
   inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: themeColors.surface, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: themeColors.border, paddingHorizontal: Spacing.md },
+  inputWrapperError: { borderColor: themeColors.error, borderWidth: 1.5, backgroundColor: themeColors.error + '08' },
   inputIcon: { marginRight: Spacing.sm },
   input: { flex: 1, height: 50, color: themeColors.textPrimary, fontSize: Typography.fontSize.md },
   passwordInput: { paddingRight: 4 },
   eyeButton: { padding: Spacing.xs },
-  errorText: { fontSize: Typography.fontSize.xs, color: themeColors.error, marginTop: 4 },
+  errorText: { fontSize: Typography.fontSize.xs, color: themeColors.error, marginTop: 4, marginLeft: 2 },
   nextButton: { flexDirection: 'row', backgroundColor: themeColors.primary, borderRadius: BorderRadius.md, height: 52, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, marginTop: Spacing.xl, shadowColor: themeColors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 },
   buttonDisabled: { opacity: 0.6 },
   nextButtonText: { color: themeColors.background, fontSize: Typography.fontSize.lg, fontWeight: '700' },
@@ -333,6 +389,14 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     marginTop: Spacing.md,
     paddingHorizontal: 2,
     gap: Spacing.sm,
+  },
+  termsContainerError: {
+    backgroundColor: themeColors.error + '08',
+    borderRadius: BorderRadius.sm,
+    borderWidth: 1,
+    borderColor: themeColors.error,
+    paddingVertical: Spacing.xs,
+    paddingHorizontal: Spacing.sm,
   },
   checkbox: {
     justifyContent: 'center',
@@ -409,4 +473,3 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     fontWeight: '800',
   },
 });
-

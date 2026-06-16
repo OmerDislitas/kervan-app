@@ -10,7 +10,6 @@ import {
   Modal,
   FlatList,
   TextInput,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +30,8 @@ export default function RegisterStep2() {
   const [uniSearch, setUniSearch] = useState('');
   const [deptSearch, setDeptSearch] = useState('');
 
+  const [errors, setErrors] = useState<{ university?: string; department?: string; year?: string }>({});
+
   const filteredUniversities = ISTANBUL_UNIVERSITIES.filter((u) =>
     u.toLowerCase().includes(uniSearch.toLowerCase())
   );
@@ -40,19 +41,18 @@ export default function RegisterStep2() {
   );
 
   const handleNext = () => {
-    if (!university) {
-      Alert.alert('Eksik Bilgi', 'Lütfen üniversitenizi seçin.');
-      return;
-    }
-    if (!department) {
-      Alert.alert('Eksik Bilgi', 'Lütfen bölümünüzü seçin.');
-      return;
-    }
-    if (!year) {
-      Alert.alert('Eksik Bilgi', 'Lütfen sınıfınızı seçin.');
+    const newErrors: { university?: string; department?: string; year?: string } = {};
+
+    if (!university) newErrors.university = 'Üniversitenizi seçin.';
+    if (!department) newErrors.department = 'Bölümünüzü seçin.';
+    if (!year) newErrors.year = 'Sınıfınızı seçin.';
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
+    setErrors({});
     registerData.university = university;
     registerData.department = department;
     registerData.year = year;
@@ -97,58 +97,85 @@ export default function RegisterStep2() {
 
         {/* Üniversite Seçimi */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Üniversite *</Text>
+          <Text style={[styles.label, errors.university && styles.labelError]}>Üniversite *</Text>
           <TouchableOpacity
-            style={styles.selectButton}
-            onPress={() => setShowUniversityModal(true)}
+            style={[styles.selectButton, errors.university && styles.selectButtonError]}
+            onPress={() => {
+              setShowUniversityModal(true);
+              if (errors.university) setErrors((e) => ({ ...e, university: undefined }));
+            }}
             activeOpacity={0.85}
           >
-            <Ionicons name="school-outline" size={18} color={themeColors.textSecondary} style={styles.inputIcon} />
+            <Ionicons
+              name="school-outline"
+              size={18}
+              color={errors.university ? themeColors.error : themeColors.textSecondary}
+              style={styles.inputIcon}
+            />
             <Text
               style={[styles.selectButtonText, university ? { color: themeColors.textPrimary } : { color: themeColors.textMuted }]}
               numberOfLines={1}
             >
               {university || 'Üniversite seçin'}
             </Text>
-            <Ionicons name="chevron-down" size={16} color={themeColors.textSecondary} />
+            <Ionicons name="chevron-down" size={16} color={errors.university ? themeColors.error : themeColors.textSecondary} />
           </TouchableOpacity>
+          {errors.university && <Text style={styles.errorText}>{errors.university}</Text>}
         </View>
 
         {/* Bölüm Seçimi */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Bölüm *</Text>
+          <Text style={[styles.label, errors.department && styles.labelError]}>Bölüm *</Text>
           <TouchableOpacity
-            style={styles.selectButton}
-            onPress={() => setShowDepartmentModal(true)}
+            style={[styles.selectButton, errors.department && styles.selectButtonError]}
+            onPress={() => {
+              setShowDepartmentModal(true);
+              if (errors.department) setErrors((e) => ({ ...e, department: undefined }));
+            }}
             activeOpacity={0.85}
           >
-            <Ionicons name="book-outline" size={18} color={themeColors.textSecondary} style={styles.inputIcon} />
+            <Ionicons
+              name="book-outline"
+              size={18}
+              color={errors.department ? themeColors.error : themeColors.textSecondary}
+              style={styles.inputIcon}
+            />
             <Text
               style={[styles.selectButtonText, department ? { color: themeColors.textPrimary } : { color: themeColors.textMuted }]}
               numberOfLines={1}
             >
               {department || 'Bölüm seçin'}
             </Text>
-            <Ionicons name="chevron-down" size={16} color={themeColors.textSecondary} />
+            <Ionicons name="chevron-down" size={16} color={errors.department ? themeColors.error : themeColors.textSecondary} />
           </TouchableOpacity>
+          {errors.department && <Text style={styles.errorText}>{errors.department}</Text>}
         </View>
 
         {/* Sınıf Seçimi */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Sınıf *</Text>
+          <Text style={[styles.label, errors.year && styles.labelError]}>Sınıf *</Text>
           <TouchableOpacity
-            style={styles.selectButton}
-            onPress={() => setShowYearModal(true)}
+            style={[styles.selectButton, errors.year && styles.selectButtonError]}
+            onPress={() => {
+              setShowYearModal(true);
+              if (errors.year) setErrors((e) => ({ ...e, year: undefined }));
+            }}
             activeOpacity={0.85}
           >
-            <Ionicons name="calendar-outline" size={18} color={themeColors.textSecondary} style={styles.inputIcon} />
+            <Ionicons
+              name="calendar-outline"
+              size={18}
+              color={errors.year ? themeColors.error : themeColors.textSecondary}
+              style={styles.inputIcon}
+            />
             <Text
               style={[styles.selectButtonText, year ? { color: themeColors.textPrimary } : { color: themeColors.textMuted }]}
             >
               {year || 'Sınıf seçin'}
             </Text>
-            <Ionicons name="chevron-down" size={16} color={themeColors.textSecondary} />
+            <Ionicons name="chevron-down" size={16} color={errors.year ? themeColors.error : themeColors.textSecondary} />
           </TouchableOpacity>
+          {errors.year && <Text style={styles.errorText}>{errors.year}</Text>}
         </View>
 
         <TouchableOpacity style={styles.nextButton} onPress={handleNext} activeOpacity={0.85}>
@@ -199,7 +226,7 @@ export default function RegisterStep2() {
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.modalItem, university === item && styles.modalItemSelected]}
-                  onPress={() => { setUniversity(item); setUniSearch(''); setShowUniversityModal(false); }}
+                  onPress={() => { setUniversity(item); setUniSearch(''); setShowUniversityModal(false); setErrors((e) => ({ ...e, university: undefined })); }}
                 >
                   <Text style={[styles.modalItemText, university === item && { color: themeColors.primary }]}>
                     {item}
@@ -246,7 +273,7 @@ export default function RegisterStep2() {
               renderItem={({ item }) => (
                 <TouchableOpacity
                   style={[styles.modalItem, department === item && styles.modalItemSelected]}
-                  onPress={() => { setDepartment(item); setDeptSearch(''); setShowDepartmentModal(false); }}
+                  onPress={() => { setDepartment(item); setDeptSearch(''); setShowDepartmentModal(false); setErrors((e) => ({ ...e, department: undefined })); }}
                 >
                   <Text style={[styles.modalItemText, department === item && { color: themeColors.primary }]}>
                     {item}
@@ -275,7 +302,7 @@ export default function RegisterStep2() {
               <TouchableOpacity
                 key={y}
                 style={[styles.modalItem, year === y && styles.modalItemSelected]}
-                onPress={() => { setYear(y); setShowYearModal(false); }}
+                onPress={() => { setYear(y); setShowYearModal(false); setErrors((e) => ({ ...e, year: undefined })); }}
               >
                 <Text style={[styles.modalItemText, year === y && { color: themeColors.primary }]}>{y}</Text>
                 {year === y && <Ionicons name="checkmark" size={18} color={themeColors.primary} />}
@@ -319,9 +346,12 @@ const createStyles = (themeColors: any) => StyleSheet.create({
   stepSubtitle: { fontSize: Typography.fontSize.md, color: themeColors.textSecondary, marginBottom: Spacing.xl, lineHeight: 22 },
   inputGroup: { marginBottom: Spacing.md },
   label: { fontSize: Typography.fontSize.sm, color: themeColors.textSecondary, marginBottom: Spacing.xs, fontWeight: '500' },
+  labelError: { color: themeColors.error },
   inputIcon: { marginRight: Spacing.sm },
   selectButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: themeColors.surface, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: themeColors.border, paddingHorizontal: Spacing.md, height: 50 },
+  selectButtonError: { borderColor: themeColors.error, borderWidth: 1.5, backgroundColor: themeColors.error + '08' },
   selectButtonText: { flex: 1, fontSize: Typography.fontSize.md, color: themeColors.textPrimary },
+  errorText: { fontSize: Typography.fontSize.xs, color: themeColors.error, marginTop: 4, marginLeft: 2 },
   nextButton: { flexDirection: 'row', backgroundColor: themeColors.primary, borderRadius: BorderRadius.md, height: 52, alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, marginTop: Spacing.xl, shadowColor: themeColors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 },
   nextButtonText: { color: themeColors.background, fontSize: Typography.fontSize.lg, fontWeight: '700' },
   skipStudentButton: {
@@ -351,4 +381,3 @@ const createStyles = (themeColors: any) => StyleSheet.create({
   modalItemSelected: { backgroundColor: themeColors.surfaceLight, borderRadius: BorderRadius.sm, paddingHorizontal: Spacing.sm },
   modalItemText: { fontSize: Typography.fontSize.md, color: themeColors.textPrimary, flex: 1 },
 });
-

@@ -10,8 +10,10 @@ import AppTourModal from '@/components/AppTourModal';
 import { useTourStore } from '@/stores/tourStore';
 import { fetchOrganizations, fetchActiveEventsCount } from './events/index';
 import { fetchDailyFacts } from './explore/index';
+import { useJSThreadProbe } from '@/lib/debugPerf';
 
 export default function AppLayout() {
+  useJSThreadProbe('TabLayout');
   const insets = useSafeAreaInsets();
   const { isAdmin } = useAuthStore();
   const themeColors = useThemeColors();
@@ -133,12 +135,19 @@ export default function AppLayout() {
           ),
         }}
       />
-      <Tabs.Screen
-        name="onboarding"
-        options={{
-          href: null,
-        }}
-      />
+      <Tabs.Screen name="onboarding" options={{ href: null }} />
+
+      {/* _components klasörleri — route değil, tab'dan gizle */}
+      <Tabs.Screen name="_components/HomeHeader" options={{ href: null }} />
+      <Tabs.Screen name="_components/HomeHero" options={{ href: null }} />
+      <Tabs.Screen name="_components/QuestionOfTheWeek" options={{ href: null }} />
+      <Tabs.Screen name="_components/CompassCard" options={{ href: null }} />
+      <Tabs.Screen name="_components/FridayCard" options={{ href: null }} />
+      <Tabs.Screen name="_components/UpcomingEventsSection" options={{ href: null }} />
+      <Tabs.Screen name="_components/NextEventSection" options={{ href: null }} />
+      <Tabs.Screen name="_components/RankingModal" options={{ href: null }} />
+      <Tabs.Screen name="explore/_components/ExploreHeader" options={{ href: null }} />
+      <Tabs.Screen name="explore/_components/StoryModal" options={{ href: null }} />
     </Tabs>
       <AppTourModal visible={showTour} onClose={() => setShowTour(false)} />
     </>

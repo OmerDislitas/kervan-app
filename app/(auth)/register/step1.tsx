@@ -8,7 +8,6 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,16 +24,24 @@ export default function RegisterStep1() {
   const [phone, setPhone] = useState('');
   const [gender, setGender] = useState<'male' | 'female' | null>(null);
 
+  const [errors, setErrors] = useState<{ fullName?: string; gender?: string }>({});
+
   const handleNext = () => {
+    const newErrors: { fullName?: string; gender?: string } = {};
+
     if (!fullName.trim()) {
-      Alert.alert('Eksik Bilgi', 'Lütfen adınızı ve soyadınızı girin.');
-      return;
+      newErrors.fullName = 'Adınızı ve soyadınızı girin.';
     }
     if (!gender) {
-      Alert.alert('Eksik Bilgi', 'Lütfen cinsiyetinizi seçin.');
+      newErrors.gender = 'Cinsiyetinizi seçin.';
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
+    setErrors({});
     registerData.fullName = fullName.trim();
     registerData.phone = phone.trim();
     registerData.gender = gender;
@@ -71,18 +78,27 @@ export default function RegisterStep1() {
 
         {/* Ad Soyad */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Ad Soyad *</Text>
-          <View style={styles.inputWrapper}>
-            <Ionicons name="person-outline" size={18} color={themeColors.textSecondary} style={styles.inputIcon} />
+          <Text style={[styles.label, errors.fullName && styles.labelError]}>Ad Soyad *</Text>
+          <View style={[styles.inputWrapper, errors.fullName && styles.inputWrapperError]}>
+            <Ionicons
+              name="person-outline"
+              size={18}
+              color={errors.fullName ? themeColors.error : themeColors.textSecondary}
+              style={styles.inputIcon}
+            />
             <TextInput
               style={styles.input}
               placeholder="Ad Soyad"
               placeholderTextColor={themeColors.textMuted}
               value={fullName}
-              onChangeText={setFullName}
+              onChangeText={(t) => {
+                setFullName(t);
+                if (errors.fullName) setErrors((e) => ({ ...e, fullName: undefined }));
+              }}
               autoCapitalize="words"
             />
           </View>
+          {errors.fullName && <Text style={styles.errorText}>{errors.fullName}</Text>}
         </View>
 
         {/* Telefon */}
@@ -103,15 +119,19 @@ export default function RegisterStep1() {
 
         {/* Cinsiyet */}
         <View style={styles.inputGroup}>
-          <Text style={styles.label}>Cinsiyet *</Text>
-          <View style={styles.genderRow}>
+          <Text style={[styles.label, errors.gender && styles.labelError]}>Cinsiyet *</Text>
+          <View style={[styles.genderRow, errors.gender && styles.genderRowError]}>
             <TouchableOpacity
               style={[
                 styles.genderOption,
                 gender === 'male' && styles.genderSelected,
                 gender === 'male' && { borderColor: themeColors.male },
+                errors.gender && !gender && styles.genderOptionError,
               ]}
-              onPress={() => setGender('male')}
+              onPress={() => {
+                setGender('male');
+                if (errors.gender) setErrors((e) => ({ ...e, gender: undefined }));
+              }}
               activeOpacity={0.85}
             >
               <Text
@@ -129,8 +149,12 @@ export default function RegisterStep1() {
                 styles.genderOption,
                 gender === 'female' && styles.genderSelected,
                 gender === 'female' && { borderColor: themeColors.female },
+                errors.gender && !gender && styles.genderOptionError,
               ]}
-              onPress={() => setGender('female')}
+              onPress={() => {
+                setGender('female');
+                if (errors.gender) setErrors((e) => ({ ...e, gender: undefined }));
+              }}
               activeOpacity={0.85}
             >
               <Text
@@ -143,6 +167,7 @@ export default function RegisterStep1() {
               </Text>
             </TouchableOpacity>
           </View>
+          {errors.gender && <Text style={styles.errorText}>{errors.gender}</Text>}
         </View>
 
         <TouchableOpacity style={styles.nextButton} onPress={handleNext} activeOpacity={0.85}>
@@ -252,6 +277,9 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     marginBottom: Spacing.xs,
     fontWeight: '500',
   },
+  labelError: {
+    color: themeColors.error,
+  },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -260,6 +288,11 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: themeColors.border,
     paddingHorizontal: Spacing.md,
+  },
+  inputWrapperError: {
+    borderColor: themeColors.error,
+    borderWidth: 1.5,
+    backgroundColor: themeColors.error + '08',
   },
   inputIcon: {
     marginRight: Spacing.sm,
@@ -274,6 +307,9 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     flexDirection: 'row',
     gap: Spacing.sm,
   },
+  genderRowError: {
+    // just a container, errors shown on individual options
+  },
   genderOption: {
     flex: 1,
     flexDirection: 'row',
@@ -286,6 +322,11 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     borderColor: themeColors.border,
     paddingVertical: Spacing.md,
   },
+  genderOptionError: {
+    borderColor: themeColors.error,
+    borderWidth: 1.5,
+    backgroundColor: themeColors.error + '08',
+  },
   genderSelected: {
     backgroundColor: themeColors.surfaceLight,
   },
@@ -293,6 +334,12 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     fontSize: Typography.fontSize.md,
     fontWeight: '600',
     color: themeColors.textSecondary,
+  },
+  errorText: {
+    fontSize: Typography.fontSize.xs,
+    color: themeColors.error,
+    marginTop: 4,
+    marginLeft: 2,
   },
   nextButton: {
     flexDirection: 'row',
@@ -315,4 +362,3 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     fontWeight: '700',
   },
 });
-

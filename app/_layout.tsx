@@ -133,16 +133,25 @@ function RootLayoutNav() {
     const isOnboarding = segments[1] === 'onboarding';
 
     if (!session && !inAuthGroup) {
+      // Oturum yok → giriş ekranına
       router.replace('/(auth)/login');
     } else if (session) {
-      // Eğer kullanıcı giriş yapmışsa ama kullanıcı adı yoksa onboarding'e gönder (onboarding sayfası hariç)
-      if (!profile?.username && !isOnboarding) {
+      if (profile === null) {
+        // Oturum var ama profil henüz yüklenmedi (fetchProfile devam ediyor).
+        // Yönlendirme yapma; profil gelince bu effect tekrar çalışacak.
+        return;
+      }
+
+      // Profil yüklendi. username kontrolü artık güvenilir.
+      if (!profile.username && !isOnboarding) {
+        // Kullanıcı adı belirlenmemiş → onboarding ekranına
         router.replace('/(app)/onboarding');
-      } else if (profile?.username && (inAuthGroup || isOnboarding || (segments as string[]).length === 0)) {
+      } else if (profile.username && (inAuthGroup || isOnboarding || (segments as string[]).length === 0)) {
+        // Kullanıcı adı var → ana ekrana
         router.replace('/(app)');
       }
     }
-  }, [session, segments, isLoading, profile?.username, splashReady]);
+  }, [session, segments, isLoading, profile, splashReady]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
