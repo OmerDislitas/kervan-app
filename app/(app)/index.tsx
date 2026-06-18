@@ -1,6 +1,6 @@
 import React from 'react';
-import { ScrollView, RefreshControl } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScrollView, RefreshControl, Platform } from 'react-native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
@@ -85,6 +85,10 @@ export default function HomeScreen() {
   const router = useRouter();
   const { profile, fetchProfile } = useAuthStore();
   const { setShowTour } = useTourStore();
+  const insets = useSafeAreaInsets();
+
+  // Tab bar yüksekliği + bottom inset + ekstra boşluk — her cihazda güvenli
+  const tabBarHeight = (Platform.OS === 'ios' ? 60 : 56) + insets.bottom + 8;
 
   React.useEffect(() => {
     if (profile?.id) checkNotificationsFirstPrompt();
@@ -228,7 +232,7 @@ export default function HomeScreen() {
       <React.Profiler id="HomeScreen" onRender={homeProfilerHandler}>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingVertical: 16, paddingBottom: 80 }}
+        contentContainerStyle={{ paddingVertical: 16, paddingBottom: tabBarHeight }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={handleRefresh} colors={[themeColors.primary]} />
         }

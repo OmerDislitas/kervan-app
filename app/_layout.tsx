@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -6,21 +6,24 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
-import { Colors, useThemeColors } from '@/constants/theme';
+import { useThemeColors } from '@/constants/theme';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { requestPermissions, registerPushToken } from '@/lib/notificationService';
 import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
-import { onSplashDone } from '@/lib/splashState';
 
 // Native splash ekranını JS bundle yüklenene kadar dondur
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Splash animasyonu toplam süresi: 2000 (slide) + 4000 (delay) + 1200 (fade) = 7200ms
+// 7500ms'de kesinlikle routing'e izin ver.
+const SPLASH_DURATION_MS = 7500;
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
-      staleTime: 1000 * 60 * 2, // 2 dakika
+      staleTime: 1000 * 60 * 2,
     },
   },
 });
@@ -32,12 +35,95 @@ function RootLayoutNav() {
   const router = useRouter();
   const lastNotificationResponse = Notifications.useLastNotificationResponse();
 
-  // Splash animasyonu tamamlandığında true olur
-  // index.tsx'teki markSplashDone() sinyalini burada dinliyoruz
+  // Splash ekranının animasyonu bitmesi için yeterli süre geçti mi?
   const [splashReady, setSplashReady] = useState(false);
+
+  // Auth başlatma sadece bir kez yapılsın diye guard
+  const authInitDone = useRef(false);
+
   useEffect(() => {
-    const unsub = onSplashDone(() => setSplashReady(true));
-    return unsub;
+    // Splash: animasyonun bitmesi için sabit süre bekliyoruz.
+    // Animasyon callback'e bağlı değil → hiçbir zaman takılmaz.
+    const splashTimer = setTimeout(() => {
+      console.log('[Splash] splashReady = true');
+      setSplashReady(true);
+    }, SPLASH_DURATION_MS);
+
+    return () => clearTimeout(splashTimer);
+  }, []);
+
+  useEffect(() => {
+    if (authInitDone.current) return;
+    authInitDone.current = true;
+
+    // Geçersiz session'ı local'den temizle
+    const clearStaleSession = async () => {
+      try {
+        await supabase.auth.signOut({ scope: 'local' });
+      } catch {
+        // ignore
+      }
+      queryClient.clear();
+      setSession(null);
+      setLoading(false);
+    };
+
+    // Auth state listener — tek kaynak (INITIAL_SESSION dahil)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        console.log('[Auth] event:', event, '| session:', !!session);
+
+        if (event === 'SIGNED_OUT') {
+          queryClient.clear();
+          setSession(null);
+          setLoading(false);
+          return;
+        }
+
+        if (event === 'TOKEN_REFRESHED' && !session) {
+          queryClient.clear();
+          setSession(null);
+          setLoading(false);
+          return;
+        }
+
+        if (!session) {
+          queryClient.clear();
+          setSession(null);
+          setLoading(false);
+          return;
+        }
+
+        // Geçersiz refresh token hatası
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+          try {
+            setSession(session);
+            await fetchProfile(session.user.id);
+
+            if (event === 'SIGNED_IN') {
+              // Bildirim izni ve token kaydı sadece giriş sırasında
+              const enabled = useSettingsStore.getState().notificationsEnabled;
+              if (enabled) {
+                const granted = await requestPermissions();
+                if (granted) {
+                  await registerPushToken(session.user.id);
+                }
+              }
+            }
+          } catch (err) {
+            console.error('[Auth] Session init error:', err);
+          } finally {
+            setLoading(false);
+          }
+          return;
+        }
+
+        setSession(session);
+        setLoading(false);
+      }
+    );
+
+    return () => subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -55,99 +141,31 @@ function RootLayoutNav() {
     }
   }, [lastNotificationResponse, session]);
 
+  // Routing effect — hem splash hem auth tamamlanınca çalışır
   useEffect(() => {
-    // Geçersiz/süresi dolmuş refresh token'ı YEREL depodan kesin olarak temizle.
-    // scope:'local' sunucuya istek atmadan AsyncStorage'daki oturumu siler;
-    // böylece "Invalid Refresh Token" hatası bir sonraki açılışta tekrarlamaz.
-    const clearStaleSession = async () => {
-      try {
-        await supabase.auth.signOut({ scope: 'local' });
-      } catch {
-        // ignore
-      }
-      queryClient.clear();
-      setSession(null);
-      setLoading(false);
-    };
+    console.log('[Routing] isLoading:', isLoading, '| splashReady:', splashReady, '| session:', !!session, '| profile:', !!profile);
 
-    // Mevcut oturumu kontrol et
-    supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error) {
-        // Geçersiz/süresi dolmuş refresh token — oturumu temizle, login'e yönlendir
-        console.log('Auth session error (token temizleniyor):', error.message);
-        clearStaleSession();
-        return;
-      }
-      setSession(session);
-      if (session?.user) {
-        fetchProfile(session.user.id).finally(() => setLoading(false));
-      } else {
-        setLoading(false);
-      }
-    }).catch(err => {
-      console.log('getSession catch error (token temizleniyor):', err?.message ?? err);
-      clearStaleSession();
-    });
-
-    // Auth durum değişikliklerini dinle
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        // SIGNED_OUT veya token yenileme hatası — cache temizle
-        if (event === 'SIGNED_OUT' || event === 'TOKEN_REFRESHED' && !session) {
-          queryClient.clear();
-          setSession(null);
-          setLoading(false);
-          return;
-        }
-
-        if (!session) {
-          queryClient.clear();
-          setSession(null);
-          setLoading(false);
-          return;
-        }
-
-        setSession(session);
-        if (session?.user) {
-          await fetchProfile(session.user.id);
-          // Bildirim izni ve token kaydı sadece kullanıcı aktif ettiyse yapılır
-          const enabled = useSettingsStore.getState().notificationsEnabled;
-          if (enabled) {
-            const granted = await requestPermissions();
-            if (granted) {
-              await registerPushToken(session.user.id);
-            }
-          }
-        }
-        setLoading(false);
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
     if (isLoading || !splashReady) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const isOnboarding = segments[1] === 'onboarding';
 
     if (!session && !inAuthGroup) {
-      // Oturum yok → giriş ekranına
+      console.log('[Routing] → login');
       router.replace('/(auth)/login');
     } else if (session) {
       if (profile === null) {
-        // Oturum var ama profil henüz yüklenmedi (fetchProfile devam ediyor).
-        // Yönlendirme yapma; profil gelince bu effect tekrar çalışacak.
+        // isLoading false ama profile null: fetchProfile başarısız oldu → login
+        console.log('[Routing] session var ama profile null → login');
+        router.replace('/(auth)/login');
         return;
       }
 
-      // Profil yüklendi. username kontrolü artık güvenilir.
       if (!profile.username && !isOnboarding) {
-        // Kullanıcı adı belirlenmemiş → onboarding ekranına
+        console.log('[Routing] → onboarding');
         router.replace('/(app)/onboarding');
       } else if (profile.username && (inAuthGroup || isOnboarding || (segments as string[]).length === 0)) {
-        // Kullanıcı adı var → ana ekrana
+        console.log('[Routing] → (app)');
         router.replace('/(app)');
       }
     }
@@ -165,11 +183,11 @@ function RootLayoutNav() {
 function ThemeStatusBar() {
   const themeColors = useThemeColors();
   const theme = useSettingsStore((state) => state.theme);
-  
+
   return (
-    <StatusBar 
-      style={theme === 'light' ? 'dark' : 'light'} 
-      backgroundColor={themeColors.background} 
+    <StatusBar
+      style={theme === 'light' ? 'dark' : 'light'}
+      backgroundColor={themeColors.background}
     />
   );
 }

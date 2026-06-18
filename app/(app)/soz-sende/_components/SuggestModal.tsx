@@ -18,6 +18,7 @@ interface SuggestModalProps {
   onChangeText: (text: string) => void;
   onClose: () => void;
   onSubmit: () => void;
+  hasError?: boolean;
 }
 
 /**
@@ -30,6 +31,7 @@ const SuggestModal = React.memo(function SuggestModal({
   onChangeText,
   onClose,
   onSubmit,
+  hasError = false,
 }: SuggestModalProps) {
   const themeColors = useThemeColors();
   const styles = React.useMemo(() => createStyles(themeColors), [themeColors]);
@@ -56,7 +58,7 @@ const SuggestModal = React.memo(function SuggestModal({
             Tartışılmasını istediğin fikri veya soruyu yaz:
           </Text>
           <TextInput
-            style={styles.modalInput}
+            style={[styles.modalInput, hasError && { borderColor: '#EF4444', borderWidth: 1.5 }]}
             placeholder="Önerinizi buraya yazın..."
             placeholderTextColor={themeColors.textMuted}
             value={value}
@@ -65,6 +67,9 @@ const SuggestModal = React.memo(function SuggestModal({
             maxLength={300}
             autoFocus
           />
+          {hasError && (
+            <Text style={{ color: '#EF4444', fontSize: 12, marginTop: 2 }}>Bu alan zorunludur</Text>
+          )}
           <Text style={styles.charCount}>{value.length}/300</Text>
           <TouchableOpacity
             style={styles.modalSubmitBtn}

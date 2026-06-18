@@ -71,6 +71,7 @@ export default function EventsScreen() {
     description: '',
     location: '',
   });
+  const [titleError, setTitleError] = React.useState(false);
 
   const { data: organizations = [], isLoading: isOrgLoading, refetch: refetchOrgs, isRefetching: isRefetchingOrgs } = useQuery({
     queryKey: ['organizations'],
@@ -93,20 +94,21 @@ export default function EventsScreen() {
       if (error) throw error;
     },
     onSuccess: () => {
-      Alert.alert('Teşekkürler!', 'Etkinlik önerin başarıyla alındı. Admin ekibimiz inceleyecektir.');
       setShowSuggestModal(false);
       setSuggestForm({ title: '', description: '', location: '' });
+      setTitleError(false);
     },
-    onError: (err: any) => {
-      Alert.alert('Hata', 'Öneri gönderilirken bir sorun oluştu: ' + err.message);
+    onError: () => {
+      // Sessiz hata — kullanıcı tekrar deneyebilir
     }
   });
 
   const handleSuggestSubmit = () => {
     if (!suggestForm.title.trim()) {
-      Alert.alert('Uyarı', 'Lütfen en azından bir başlık giriniz.');
+      setTitleError(true);
       return;
     }
+    setTitleError(false);
     suggestMutation.mutate(suggestForm);
   };
 
@@ -278,12 +280,15 @@ export default function EventsScreen() {
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Başlık *</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, titleError && { borderColor: '#EF4444', borderWidth: 1.5 }]}
                   placeholder="Hangi etkinliği önerirsin?"
                   placeholderTextColor={themeColors.textMuted}
                   value={suggestForm.title}
-                  onChangeText={(v) => setSuggestForm(prev => ({ ...prev, title: v }))}
+                  onChangeText={(v) => { setSuggestForm(prev => ({ ...prev, title: v })); if (v.trim()) setTitleError(false); }}
                 />
+                {titleError && (
+                  <Text style={{ color: '#EF4444', fontSize: 12, marginTop: 2 }}>Bu alan zorunludur</Text>
+                )}
               </View>
 
               <View style={styles.inputGroup}>

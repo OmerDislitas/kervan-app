@@ -54,8 +54,10 @@ export default function AppLayout() {
           backgroundColor: themeColors.surface,
           borderTopColor: themeColors.border,
           borderTopWidth: 1,
-          height: (Platform.OS === 'ios' ? 60 : 56) + insets.bottom,
-          paddingBottom: insets.bottom + (Platform.OS === 'ios' ? 4 : 6),
+          // edgeToEdgeEnabled=true'da Android'de sistem nav bar transparan;
+          // Math.max ile minimum bottom pad garantileniyor
+          height: (Platform.OS === 'ios' ? 64 : 60) + Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 0),
+          paddingBottom: Math.max(insets.bottom, Platform.OS === 'android' ? 16 : 0) + (Platform.OS === 'ios' ? 8 : 10),
           paddingTop: 8,
         },
         tabBarActiveTintColor: themeColors.tabActive,

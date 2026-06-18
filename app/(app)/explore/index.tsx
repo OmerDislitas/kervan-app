@@ -1,4 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
+import { useRouter } from 'expo-router';
 import {
   View,
   Text,
@@ -12,19 +13,19 @@ import {
   Modal,
   ActivityIndicator,
   RefreshControl,
-  Alert,
   InteractionManager,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Spacing, BorderRadius, useThemeColors } from '@/constants/theme';
 import { useFocusTimer, createProfilerHandler } from '@/lib/debugPerf';
-import { useFocusEffect } from '@react-navigation/native';
 import { QUICK_FACTS } from '@/constants/facts';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuthStore } from '@/stores/authStore';
 import {
   EXPLORE_QUOTE_POOL,
   NATURE_BACKGROUNDS,
@@ -47,18 +48,6 @@ const _DAILY_QUIZ = getDailyQuiz();
 const _NATURE_BG = NATURE_BACKGROUNDS[_DAY_OF_YEAR % NATURE_BACKGROUNDS.length];
 const _TODAY_QUOTE = EXPLORE_QUOTE_POOL[_DAY_OF_YEAR % EXPLORE_QUOTE_POOL.length];
 const _QUOTE_BG = QUOTE_BACKGROUNDS[_DAY_OF_YEAR % QUOTE_BACKGROUNDS.length];
-
-// Modül seviyesinde → render'da yeniden oluşturulmaz
-const IN_APP_TASKS = [
-  { id: '1', title: 'Tartışmaya Katıl', desc: 'Söz Sende paneline git ve aktif bir soruya yorum yaz.', icon: 'chatbubbles' },
-  { id: '2', title: 'Bilgi Avcısı', desc: 'Keşfet\'teki günün hap bilgilerinden birine tıkla ve sonuna kadar oku.', icon: 'book' },
-  { id: '3', title: 'Topluluk Desteği', desc: 'Söz Sende panelinde hoşuna giden 3 farklı yoruma beğeni bırak.', icon: 'heart' },
-  { id: '4', title: 'Profilini Güçlendir', desc: 'Profiline git, rozetlerini ve istatistiklerini kontrol et.', icon: 'person' },
-  { id: '5', title: 'Günün Sözünü Oku', desc: 'Keşfet ekranındaki "Günün Sözü" yuvarlağına tıkla ve günün ilhamını al.', icon: 'book-outline' },
-  { id: '6', title: 'Yeni Bağlantı Kur', desc: 'Profil sekmesine git ve tanıdığın birinin profilini ziyaret edip takip et.', icon: 'people' },
-  { id: '7', title: 'Gündem Yorumcusu', desc: 'Keşfet\'teki Gündem bölümünde aktif bir konuya yorum bırak.', icon: 'trending-up' },
-  { id: '8', title: 'Hap Bilgi Okuyucusu', desc: 'Bugünün iki hap bilgisini de oku ve yeni bir şeyler öğren.', icon: 'bulb' },
-];
 
 // Supabase'den günlük hap bilgileri çek
 export async function fetchDailyFacts() {
@@ -86,6 +75,7 @@ export default function ExploreScreen() {
   const themeColors = useThemeColors();
   const styles = React.useMemo(() => createStyles(themeColors), [themeColors]);
   const scrollY = useRef(new Animated.Value(0)).current;
+  const router = useRouter();
   useFocusTimer('ExploreScreen');
   const exploreProfilerHandler = React.useMemo(() => createProfilerHandler('ExploreScreen'), []);
 
@@ -106,13 +96,54 @@ export default function ExploreScreen() {
   const [selectedFact, setSelectedFact] = useState<any>(null);
   const [showAllFacts, setShowAllFacts] = useState(false);
 
-  // Pusula state
-  const compassAnim = useRef(new Animated.Value(0)).current;
-  const [dailyTask, setDailyTask] = useState<any>(null);
-  const [isSpinning, setIsSpinning] = useState(false);
-  const [isTaskCompleted, setIsTaskCompleted] = useState(false);
-  const [cooldownTime, setCooldownTime] = useState<string | null>(null);
-  const COOLDOWN_HOURS = 12;
+  // Puan sistemi: fact_id → boolean (bugün puan kazanıldı mı?)
+  const [factPointsEarned, setFactPointsEarned] = useState<Record<string, boolean>>({});
+  const { profile, fetchProfile } = useAuthStore();
+
+  const todayKey = new Date().toISOString().split('T')[0];
+
+  // Bugün hangi fact'lerden puan kazanıldığını AsyncStorage'dan yükle
+  const loadFactPoints = React.useCallback(async (facts: any[]) => {
+    const entries: Record<string, boolean> = {};
+    await Promise.all(
+      facts.map(async (f: any) => {
+        const key = `@kervan_fact_reward_${todayKey}_${f.id}`;
+        const val = await AsyncStorage.getItem(key);
+        entries[f.id] = val === 'true';
+      })
+    );
+    setFactPointsEarned(entries);
+  }, [todayKey]);
+
+  // "Okudum" butonuna basınca 2 puan kazan
+  const handleOkudum = async (fact: any) => {
+    // UI'yi kapat
+    setSelectedFact(null);
+
+    if (!profile?.id) return;
+
+    const storageKey = `@kervan_fact_reward_${todayKey}_${fact.id}`;
+    const alreadyLocal = await AsyncStorage.getItem(storageKey);
+    if (alreadyLocal === 'true') {
+      // Zaten kazanıldı, sadece kapat
+      return;
+    }
+
+    try {
+      const { data, error } = await supabase.rpc('claim_fact_reward', { fact_id: String(fact.id) });
+      if (error) throw error;
+      const result = data as { success: boolean; already_claimed?: boolean; points: number };
+      if (result.success) {
+        await AsyncStorage.setItem(storageKey, 'true');
+        setFactPointsEarned(prev => ({ ...prev, [fact.id]: true }));
+        useAuthStore.setState({ profile: { ...profile, points: result.points } });
+        await fetchProfile(profile.id);
+      }
+    } catch (e) {
+      console.log('claim_fact_reward error:', e);
+    }
+  };
+
 
   // Supabase hap bilgileri — animasyon sonrasına ertelendi
   const { data: supabaseDailyFacts, isLoading: isFactsQueryLoading, refetch: refetchFacts } = useQuery({
@@ -169,6 +200,13 @@ export default function ExploreScreen() {
     return shuffled;
   }, [supabaseDailyFacts]);
 
+  // Yeni bilgiler yüklenince puan durumunu sıfırla/yükle
+  React.useEffect(() => {
+    if (dailyFacts && dailyFacts.length > 0) {
+      loadFactPoints(dailyFacts);
+    }
+  }, [dailyFacts, loadFactPoints]);
+
   // Story gruplarını oluştur — modül-level sabitler kullanılır, mount'ta hesaplanmaz
   const storiesData = React.useMemo(() => {
     const today = new Date();
@@ -214,74 +252,6 @@ export default function ExploreScreen() {
       },
     ];
   }, [dailyFacts]);
-
-  // Pusula
-  const loadDailyTask = useCallback(async () => {
-    try {
-      const [savedTaskStr, timestampStr, completedStr] = await Promise.all([
-        AsyncStorage.getItem('@kervan_compass_task'),
-        AsyncStorage.getItem('@kervan_compass_time'),
-        AsyncStorage.getItem('@kervan_compass_completed'),
-      ]);
-      if (savedTaskStr && timestampStr) {
-        const timestamp = parseInt(timestampStr, 10);
-        const diffHours = (Date.now() - timestamp) / (1000 * 60 * 60);
-        if (diffHours < COOLDOWN_HOURS) {
-          setDailyTask(JSON.parse(savedTaskStr));
-          setIsTaskCompleted(completedStr === 'true');
-          const remainingMs = (COOLDOWN_HOURS * 60 * 60 * 1000) - (Date.now() - timestamp);
-          const remainingHours = Math.floor(remainingMs / (1000 * 60 * 60));
-          const remainingMins = Math.floor((remainingMs % (1000 * 60 * 60)) / (1000 * 60));
-          setCooldownTime(`${remainingHours}s ${remainingMins}d`);
-        } else {
-          await AsyncStorage.multiRemove(['@kervan_compass_task', '@kervan_compass_time', '@kervan_compass_completed']);
-          setDailyTask(null); setIsTaskCompleted(false); setCooldownTime(null);
-        }
-      }
-    } catch (e) { console.log('Task load error', e); }
-  }, []);
-
-  useFocusEffect(
-    React.useCallback(() => {
-      // Geçiş animasyonu bitmeden ağır AsyncStorage + setState işini başlatma.
-      // InteractionManager, native animasyon frame'leri tamamlanana kadar bekler.
-      const interactionTask = InteractionManager.runAfterInteractions(() => {
-        loadDailyTask();
-      });
-      const interval = setInterval(loadDailyTask, 60000);
-      AsyncStorage.setItem('@kervan_last_explore_view', Date.now().toString()).catch(() => {});
-      return () => {
-        interactionTask.cancel();
-        clearInterval(interval);
-      };
-    }, [loadDailyTask])
-  );
-
-  const spinRotation = compassAnim.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '1080deg'] });
-
-  const spinCompass = () => {
-    if (isSpinning) return;
-    if (dailyTask && !isTaskCompleted) { Alert.alert('Hedef Devam Ediyor', 'Lütfen yeni bir hedef için önce şu anki hedefimizi gerçekleştirelim.'); return; }
-    else if (dailyTask && isTaskCompleted) { Alert.alert('Dinlenme Süresi', `Yeni pusula için dinlenme süresini beklemen gerekiyor. Kalan süre: ${cooldownTime}`); return; }
-    setIsSpinning(true);
-    compassAnim.setValue(0);
-    Animated.timing(compassAnim, { toValue: 1, duration: 2000, useNativeDriver: true }).start(async () => {
-      const randomTask = IN_APP_TASKS[Math.floor(Math.random() * IN_APP_TASKS.length)];
-      setDailyTask(randomTask); setIsSpinning(false); setIsTaskCompleted(false);
-      await AsyncStorage.setItem('@kervan_compass_task', JSON.stringify(randomTask));
-      await AsyncStorage.setItem('@kervan_compass_time', Date.now().toString());
-      await AsyncStorage.setItem('@kervan_compass_completed', 'false');
-      loadDailyTask();
-    });
-  };
-
-  const completeCompassTask = async () => {
-    if (isTaskCompleted) return;
-    setIsTaskCompleted(true);
-    await AsyncStorage.setItem('@kervan_compass_completed', 'true');
-    loadDailyTask();
-    Alert.alert('Tebrikler! 🎉', 'Hedefine ulaştın ve 25 Puan kazandın. Pusulayı tekrar çevirmek için dinlenme süresinin dolmasını bekle.');
-  };
 
   const closeStory = () => {
     setActiveStoryGroup(null);
@@ -342,7 +312,12 @@ export default function ExploreScreen() {
               </View>
             ) : (trendQuestions && trendQuestions.length > 0) ? (
               trendQuestions.map((trend: any) => (
-                <TouchableOpacity key={trend.id} style={styles.trendItem}>
+                <TouchableOpacity
+                  key={trend.id}
+                  style={styles.trendItem}
+                  onPress={() => router.push(`/(app)/soz-sende/${trend.id}` as any)}
+                  activeOpacity={0.7}
+                >
                   <View style={styles.trendInfo}>
                     <Text style={styles.trendRank}>#{trend.rank} · Gündem</Text>
                     <Text style={styles.trendHashtag}>{trend.hashtag}</Text>
@@ -402,55 +377,6 @@ export default function ExploreScreen() {
           )}
         </View>
 
-        {/* Kervan Pusulası */}
-        <View style={styles.compassSection}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={styles.sectionTitle}>Kervan Pusulası</Text>
-              <Text style={styles.sectionSubtitle}>Bugünkü hedefini belirle</Text>
-            </View>
-            {cooldownTime && <Text style={styles.compassTip}>{cooldownTime} kaldı</Text>}
-          </View>
-          <View style={styles.compassCard}>
-            <View style={styles.compassLayout}>
-              <View style={styles.compassWheel}>
-                <Animated.View style={{ transform: [{ rotate: spinRotation }] }}>
-                  <Ionicons name="compass" size={80} color={themeColors.primary} />
-                </Animated.View>
-              </View>
-              <View style={styles.taskContent}>
-                {!dailyTask ? (
-                  <View style={styles.spinPrompt}>
-                    <Text style={styles.spinTitle}>Pusulayı Çevir!</Text>
-                    <Text style={styles.spinDesc}>Bugün için bir hedef belirle ve topluluğa katkı sağla.</Text>
-                    <TouchableOpacity style={styles.spinBtn} onPress={spinCompass} disabled={isSpinning}>
-                      <Text style={styles.spinBtnText}>{isSpinning ? 'Çevriliyor...' : '🧭 Çevir'}</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View style={styles.activeTask}>
-                    <View style={styles.taskIconCircle}>
-                      <Ionicons name={dailyTask.icon as any} size={24} color="#fff" />
-                    </View>
-                    <Text style={styles.taskTitle}>{dailyTask.title}</Text>
-                    <Text style={styles.taskDesc}>{dailyTask.desc}</Text>
-                    {!isTaskCompleted ? (
-                      <TouchableOpacity style={styles.completedBtn} onPress={completeCompassTask}>
-                        <Text style={styles.completedBtnText}>✓ Tamamladım</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8 }}>
-                        <Ionicons name="checkmark-circle" size={20} color={themeColors.primary} />
-                        <Text style={{ color: themeColors.primary, fontWeight: '700' }}>Tamamlandı!</Text>
-                      </View>
-                    )}
-                  </View>
-                )}
-              </View>
-            </View>
-          </View>
-        </View>
-
         <View style={{ height: 100 }} />
       </Animated.ScrollView>
 
@@ -486,10 +412,21 @@ export default function ExploreScreen() {
                 <Text style={styles.factModalDesc}>{selectedFact?.desc}</Text>
               </ScrollView>
               <TouchableOpacity
-                style={[styles.factModalAction, { backgroundColor: selectedFact?.color || themeColors.primary }]}
-                onPress={() => setSelectedFact(null)}
+                style={[
+                  styles.factModalAction,
+                  { backgroundColor: factPointsEarned[selectedFact?.id] ? '#22c55e' : (selectedFact?.color || themeColors.primary), marginTop: 'auto' },
+                ]}
+                onPress={() => handleOkudum(selectedFact)}
               >
-                <Text style={styles.factModalActionText}>Okudum</Text>
+                <Ionicons
+                  name={factPointsEarned[selectedFact?.id] ? 'checkmark-done-circle' : 'book-outline'}
+                  size={20}
+                  color="#fff"
+                  style={{ marginRight: 8 }}
+                />
+                <Text style={styles.factModalActionText}>
+                  {factPointsEarned[selectedFact?.id] ? 'Okundu ✓' : 'Okudum (+2 Puan)'}
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -557,25 +494,7 @@ const createStyles = (themeColors: any) => StyleSheet.create({
   trendRank: { fontSize: 11, color: themeColors.textMuted, fontWeight: '600' },
   trendHashtag: { fontSize: 17, fontWeight: '900', color: themeColors.textPrimary, marginVertical: 2 },
   trendPosts: { fontSize: 12, color: themeColors.textSecondary },
-  // Compass
-  compassSection: { marginTop: Spacing.xl },
-  compassTip: { fontSize: 12, color: themeColors.primary, fontWeight: '700', marginTop: 4 },
-  compassCard: { marginHorizontal: Spacing.lg, backgroundColor: themeColors.surface, borderRadius: 25, padding: 25, borderWidth: 1, borderColor: themeColors.border, overflow: 'hidden', shadowColor: themeColors.primary, shadowOffset: { width: 0, height: 10 }, shadowOpacity: 0.1, shadowRadius: 20, elevation: 5 },
-  compassLayout: { flexDirection: 'row', alignItems: 'center', gap: 20 },
-  compassWheel: { width: 100, height: 100, alignItems: 'center', justifyContent: 'center' },
-  taskContent: { flex: 1 },
-  spinPrompt: { gap: 8 },
-  spinTitle: { fontSize: 18, fontWeight: '900', color: themeColors.textPrimary },
-  spinDesc: { fontSize: 13, color: themeColors.textSecondary, lineHeight: 18 },
-  spinBtn: { backgroundColor: themeColors.primary, paddingVertical: 10, paddingHorizontal: 15, borderRadius: 12, alignSelf: 'flex-start', marginTop: 10 },
-  spinBtnText: { color: '#fff', fontWeight: '800', fontSize: 14 },
-  activeTask: { alignItems: 'flex-start', gap: 8 },
-  taskIconCircle: { width: 50, height: 50, borderRadius: 25, backgroundColor: themeColors.primary, alignItems: 'center', justifyContent: 'center', marginBottom: 5 },
-  taskTitle: { fontSize: 20, fontWeight: '900', color: themeColors.textPrimary },
-  taskDesc: { fontSize: 14, color: themeColors.textSecondary, lineHeight: 20 },
-  completedBtn: { backgroundColor: themeColors.success || themeColors.primary, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 12, marginTop: 10 },
-  completedBtnText: { color: '#fff', fontWeight: '800' },
-  // Fact Modal
+// Fact Modal
   factModalContainer: { flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'flex-end' },
   factModalContent: { height: '80%', backgroundColor: themeColors.background, borderTopLeftRadius: 40, borderTopRightRadius: 40, overflow: 'hidden' },
   factModalImage: { width: '100%', height: 350 },
@@ -583,8 +502,8 @@ const createStyles = (themeColors: any) => StyleSheet.create({
   factModalClose: { position: 'absolute', top: 20, right: 20, zIndex: 20 },
   factModalBody: { flex: 1, padding: 30, marginTop: -100 },
   factModalTitle: { fontSize: 32, fontWeight: '900', color: themeColors.textPrimary, marginBottom: 15 },
-  factModalDesc: { fontSize: 18, color: themeColors.textSecondary, lineHeight: 28, marginBottom: 30 },
-  factModalAction: { paddingVertical: 16, borderRadius: 20, alignItems: 'center', justifyContent: 'center', marginTop: 'auto' },
+  factModalDesc: { fontSize: 18, color: themeColors.textSecondary, lineHeight: 28, marginBottom: 20 },
+  factModalAction: { paddingVertical: 16, borderRadius: 20, alignItems: 'center', justifyContent: 'center', flexDirection: 'row' },
   factModalActionText: { color: '#fff', fontSize: 18, fontWeight: '900' },
   // All Facts
   allFactsContainer: { flex: 1, backgroundColor: themeColors.background },

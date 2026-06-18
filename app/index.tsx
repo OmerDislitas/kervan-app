@@ -7,10 +7,8 @@ import Animated, {
   withDelay,
   Easing,
   ReduceMotion,
-  runOnJS,
 } from 'react-native-reanimated';
 import * as SplashScreen from 'expo-splash-screen';
-import { markSplashDone } from '@/lib/splashState';
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
@@ -32,21 +30,16 @@ export default function Index() {
       reduceMotion: ReduceMotion.Never,
     });
 
-    // 2) Kayma bittikten (2000ms) + 2000ms sonra KERVAN yazısı belirir
-    // Animasyon tamamlanınca markSplashDone() ile _layout.tsx'e sinyal gönderilir
+    // 2) 4000ms gecikme + 1200ms fade → KERVAN yazısı belirir
+    // Not: Routing _layout.tsx'teki 7500ms timer tarafından yönetiliyor.
+    // Bu animasyon sadece görsel — takılmaya neden olmaz.
     textOpacity.value = withDelay(
       4000,
-      withTiming(
-        1,
-        {
-          duration: 1200,
-          easing: Easing.out(Easing.ease),
-          reduceMotion: ReduceMotion.Never,
-        },
-        (finished) => {
-          if (finished) runOnJS(markSplashDone)();
-        },
-      ),
+      withTiming(1, {
+        duration: 1200,
+        easing: Easing.out(Easing.ease),
+        reduceMotion: ReduceMotion.Never,
+      }),
     );
   }, []);
 

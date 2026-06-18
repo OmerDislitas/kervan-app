@@ -139,6 +139,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
     } catch (err) {
       console.error('[authStore] fetchProfile error:', err);
+      // Hata olsa bile isLoading'i kaldır; aksi hâlde uygulama
+      // splash ekranında sonsuza dek takılı kalır.
+      set({ isLoading: false });
     }
   },
 

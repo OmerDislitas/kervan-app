@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, StyleSheet, Alert, Platform, InteractionManager } from 'react-native';
+import { View, StyleSheet, InteractionManager } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useThemeColors } from '@/constants/theme';
@@ -24,6 +24,7 @@ export default function SozSendeScreen() {
   const sozProfilerHandler = React.useMemo(() => createProfilerHandler('SozSendeScreen'), []);
   const [suggestModalVisible, setSuggestModalVisible] = React.useState(false);
   const [suggestText, setSuggestText] = React.useState('');
+  const [suggestError, setSuggestError] = React.useState(false);
 
   // Tab geçiş animasyonu bitmeden query başlatma
   const [dataEnabled, setDataEnabled] = React.useState(false);
@@ -42,39 +43,31 @@ export default function SozSendeScreen() {
   const submitSuggestion = async (title: string) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { Alert.alert('Hata', 'Giriş yapılmış bir kullanıcı bulunamadı.'); return; }
+      if (!user) return;
       const { error } = await supabase
         .from('topic_suggestions')
         .insert({ user_id: user.id, title, status: 'pending' });
       if (error) throw error;
-      Alert.alert('Harika! 🎉', 'Tartışma konusu öneriniz başarıyla alınmıştır. İnceleme sonrası yayına alınacaktır.');
-    } catch (err: any) {
-      Alert.alert('Hata', 'Öneri iletilemedi: ' + err.message);
+      setSuggestModalVisible(false);
+      setSuggestText('');
+      setSuggestError(false);
+    } catch {
+      // Sessiz hata
     }
   };
 
   const handleSuggestTopic = () => {
-    if (Platform.OS === 'ios') {
-      Alert.prompt(
-        'Konu Önerisi 💡',
-        'Tartışılmasını istediğin fikri veya soruyu gir:',
-        [
-          { text: 'İptal', style: 'cancel' },
-          { text: 'Gönder', onPress: (text?: string) => { if (text?.trim()) submitSuggestion(text.trim()); } },
-        ],
-        'plain-text'
-      );
-    } else {
-      setSuggestText('');
-      setSuggestModalVisible(true);
-    }
+    setSuggestText('');
+    setSuggestError(false);
+    setSuggestModalVisible(true);
   };
 
-  const handleAndroidSuggestSubmit = async () => {
-    if (!suggestText.trim()) { Alert.alert('Uyarı', 'Lütfen bir öneri yazınız.'); return; }
-    setSuggestModalVisible(false);
+  const handleSuggestSubmit = async () => {
+    if (!suggestText.trim()) {
+      setSuggestError(true);
+      return;
+    }
     await submitSuggestion(suggestText.trim());
-    setSuggestText('');
   };
 
   return (
@@ -95,9 +88,10 @@ export default function SozSendeScreen() {
       <SuggestModal
         visible={suggestModalVisible}
         value={suggestText}
-        onChangeText={setSuggestText}
+        onChangeText={(t) => { setSuggestText(t); if (t.trim()) setSuggestError(false); }}
         onClose={() => setSuggestModalVisible(false)}
-        onSubmit={handleAndroidSuggestSubmit}
+        onSubmit={handleSuggestSubmit}
+        hasError={suggestError}
       />
     </SafeAreaView>
     </React.Profiler>
