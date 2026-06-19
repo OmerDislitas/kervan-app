@@ -32,9 +32,9 @@ export const HomeHeader = React.memo(function HomeHeader({
         <View style={styles.avatarPlaceholder}>
           <Text style={styles.avatarText}>{userInitial}</Text>
         </View>
-        <View>
+        <View style={{ flex: 1 }}>
           <Text style={styles.greetingText}>Merhaba,</Text>
-          <Text style={styles.userName}>{userName}</Text>
+          <Text style={styles.userName} numberOfLines={1} ellipsizeMode="tail">{userName}</Text>
         </View>
       </TouchableOpacity>
 
@@ -74,11 +74,14 @@ const createStyles = (themeColors: any) =>
       flexDirection: 'row',
       alignItems: 'center',
       gap: Spacing.md,
+      flex: 1,
+      marginRight: Spacing.md,
     },
     headerRight: {
       flexDirection: 'row',
       alignItems: 'center',
       gap: Spacing.md,
+      flexShrink: 0,
     },
     avatarPlaceholder: {
       width: 50,

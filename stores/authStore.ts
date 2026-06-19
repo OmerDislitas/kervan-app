@@ -147,7 +147,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   signOut: async () => {
     try {
-      const user = get().user;
       const keysToClear = [
         '@kervan_notifications',
         '@kervan_compass_task',
@@ -164,9 +163,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         '@kervan_last_explore_view',
         '@kervan_last_event_view'
       ];
-      if (user?.id) {
-        keysToClear.push(`@kervan_notif_first_prompt_shown_${user.id}`);
-      }
       await AsyncStorage.multiRemove(keysToClear);
     } catch (err) {
       console.error('[authStore] Error clearing AsyncStorage on signOut:', err);

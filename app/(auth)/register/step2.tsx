@@ -195,8 +195,16 @@ export default function RegisterStep2() {
       </ScrollView>
 
       {/* Üniversite Modal */}
-      <Modal visible={showUniversityModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
+      <Modal
+        visible={showUniversityModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => { setShowUniversityModal(false); setUniSearch(''); }}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+        >
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Üniversite Seç</Text>
@@ -238,12 +246,20 @@ export default function RegisterStep2() {
               keyboardShouldPersistTaps="handled"
             />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Bölüm Modal */}
-      <Modal visible={showDepartmentModal} animationType="slide" transparent>
-        <View style={styles.modalOverlay}>
+      <Modal
+        visible={showDepartmentModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => { setShowDepartmentModal(false); setDeptSearch(''); }}
+      >
+        <KeyboardAvoidingView
+          style={styles.modalOverlay}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'padding'}
+        >
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Bölüm Seç</Text>
@@ -285,29 +301,36 @@ export default function RegisterStep2() {
               keyboardShouldPersistTaps="handled"
             />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
 
       {/* Sınıf Modal */}
-      <Modal visible={showYearModal} animationType="slide" transparent>
+      <Modal
+        visible={showYearModal}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setShowYearModal(false)}
+      >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContainer, { maxHeight: 450 }]}>
+          <View style={[styles.modalContainer, { maxHeight: '70%' }]}>
             <View style={styles.modalHeader}>
               <Text style={styles.modalTitle}>Sınıf Seç</Text>
               <TouchableOpacity onPress={() => setShowYearModal(false)}>
                 <Ionicons name="close" size={24} color={themeColors.textPrimary} />
               </TouchableOpacity>
             </View>
-            {UNIVERSITY_YEARS.map((y) => (
-              <TouchableOpacity
-                key={y}
-                style={[styles.modalItem, year === y && styles.modalItemSelected]}
-                onPress={() => { setYear(y); setShowYearModal(false); setErrors((e) => ({ ...e, year: undefined })); }}
-              >
-                <Text style={[styles.modalItemText, year === y && { color: themeColors.primary }]}>{y}</Text>
-                {year === y && <Ionicons name="checkmark" size={18} color={themeColors.primary} />}
-              </TouchableOpacity>
-            ))}
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+              {UNIVERSITY_YEARS.map((y) => (
+                <TouchableOpacity
+                  key={y}
+                  style={[styles.modalItem, year === y && styles.modalItemSelected]}
+                  onPress={() => { setYear(y); setShowYearModal(false); setErrors((e) => ({ ...e, year: undefined })); }}
+                >
+                  <Text style={[styles.modalItemText, year === y && { color: themeColors.primary }]}>{y}</Text>
+                  {year === y && <Ionicons name="checkmark" size={18} color={themeColors.primary} />}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
         </View>
       </Modal>

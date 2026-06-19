@@ -1,19 +1,20 @@
 import React, { useState, useMemo } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  FlatList, 
-  TextInput, 
-  TouchableOpacity, 
-  ActivityIndicator, 
-  KeyboardAvoidingView, 
-  Platform, 
-  Alert, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TextInput,
+  TouchableOpacity,
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
   Image,
   Dimensions,
   Animated,
-  Modal
+  Modal,
+  RefreshControl,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -67,13 +68,14 @@ export default function QuestionDetailScreen() {
   const [selectedComment, setSelectedComment] = useState<any>(null);
   const [editContent, setEditContent] = useState('');
   const [expandedComments, setExpandedComments] = useState<string[]>([]);
+  const [expandedContent, setExpandedContent] = useState<string[]>([]);
 
   const { data: question, isLoading: isQuestionLoading } = useQuery({
     queryKey: ['question', id],
     queryFn: () => fetchQuestionDetail(id),
   });
 
-  const { data: comments = [], isLoading: isCommentsLoading } = useQuery({
+  const { data: comments = [], isLoading: isCommentsLoading, refetch: refetchComments, isRefetching: isCommentsRefetching } = useQuery({
     queryKey: ['comments', id],
     queryFn: () => fetchComments(id),
   });
@@ -225,22 +227,37 @@ export default function QuestionDetailScreen() {
     const replies = comments.filter(c => c.parent_id === item.id);
     const authorName = item.profiles?.username ? `@${item.profiles.username}` : (item.profiles?.full_name || 'Kullanıcı');
     const isExpanded = expandedComments.includes(item.id);
+    const TRUNCATE_LENGTH = 150;
+    const isContentExpanded = expandedContent.includes(item.id);
+    const shouldTruncate = item.content.length > TRUNCATE_LENGTH && !isContentExpanded;
 
     return (
       <View key={item.id} style={[styles.commentWrapper, isReply && styles.replyWrapper]}>
         {isReply && <View style={styles.replyConnector} />}
-        
-        <View style={[styles.commentCard, hasLiked && styles.likedCard]}>
+
+        <TouchableOpacity
+          activeOpacity={!isReply && replies.length > 0 ? 0.92 : 1}
+          onPress={() => {
+            if (!isReply && replies.length > 0) {
+              setExpandedComments(prev =>
+                prev.includes(item.id)
+                  ? prev.filter(id => id !== item.id)
+                  : [...prev, item.id]
+              );
+            }
+          }}
+        >
+        <View style={styles.commentCard}>
           <View style={styles.commentHeader}>
             <TouchableOpacity 
               onPress={() => navigateToProfile(item.user_id)}
               activeOpacity={0.8}
             >
               <LinearGradient
-                colors={hasLiked ? [themeColors.primary, '#8e44ad'] : [themeColors.surfaceLight, themeColors.border]}
+                colors={[themeColors.surfaceLight, themeColors.border]}
                 style={styles.avatarCircle}
               >
-                <Text style={[styles.avatarText, hasLiked && { color: '#fff' }]}>
+                <Text style={styles.avatarText}>
                   {(item.profiles?.username || item.profiles?.full_name || 'U').charAt(0).toUpperCase()}
                 </Text>
               </LinearGradient>
@@ -264,12 +281,12 @@ export default function QuestionDetailScreen() {
               onPress={() => handleLike(item.id, item.comment_likes || [])}
               style={styles.likeIconBtn}
             >
-              <Ionicons 
-                name={hasLiked ? "heart" : "heart-outline"} 
-                size={22} 
-                color={hasLiked ? themeColors.error : themeColors.textMuted} 
+              <Ionicons
+                name={hasLiked ? "heart" : "heart-outline"}
+                size={22}
+                color={hasLiked ? '#FF69B4' : themeColors.textMuted}
               />
-              {likesCount > 0 && <Text style={[styles.likesMiniCount, hasLiked && { color: themeColors.error }]}>{likesCount}</Text>}
+              {likesCount > 0 && <Text style={[styles.likesMiniCount, hasLiked && { color: '#FF69B4' }]}>{likesCount}</Text>}
             </TouchableOpacity>
 
             {(item.user_id === profile?.id || profile?.role === 'admin') && (
@@ -286,7 +303,15 @@ export default function QuestionDetailScreen() {
             )}
           </View>
 
-          <Text style={styles.commentText}>{item.content}</Text>
+          <Text style={styles.commentText}>
+            {shouldTruncate ? item.content.substring(0, TRUNCATE_LENGTH) : item.content}
+            {shouldTruncate && (
+              <Text onPress={() => setExpandedContent(prev => [...prev, item.id])}>
+                <Text style={{ color: themeColors.textMuted }}>{'... '}</Text>
+                <Text style={styles.readMoreText}>devamını oku</Text>
+              </Text>
+            )}
+          </Text>
           
           <View style={styles.commentFooter}>
             <TouchableOpacity 
@@ -332,6 +357,7 @@ export default function QuestionDetailScreen() {
             )}
           </View>
         </View>
+        </TouchableOpacity>
 
         {!isReply && isExpanded && replies.length > 0 && (
           <View style={styles.repliesContainer}>
@@ -367,6 +393,13 @@ export default function QuestionDetailScreen() {
           style={{ flex: 1 }}
           contentContainerStyle={styles.scrollArea}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl
+              refreshing={isCommentsRefetching}
+              onRefresh={refetchComments}
+              tintColor={themeColors.primary}
+            />
+          }
           ListHeaderComponent={
             <View style={styles.heroSection}>
               <LinearGradient
@@ -434,8 +467,11 @@ export default function QuestionDetailScreen() {
                 value={newComment}
                 onChangeText={setNewComment}
                 multiline
-                maxLength={1000}
+                maxLength={280}
               />
+              <Text style={[styles.charCounter, newComment.length >= 260 && { color: newComment.length >= 280 ? themeColors.error : themeColors.primary }]}>
+                {newComment.length}/280
+              </Text>
             </View>
             <TouchableOpacity 
               style={[styles.sendBtn, !newComment.trim() && styles.sendBtnDisabled]} 
@@ -872,6 +908,17 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     fontSize: 15,
     color: themeColors.textPrimary,
     paddingTop: 0,
+  },
+  charCounter: {
+    fontSize: 10,
+    color: themeColors.textMuted,
+    textAlign: 'right',
+    marginTop: 2,
+  },
+  readMoreText: {
+    color: themeColors.primary,
+    fontWeight: '700',
+    fontSize: 15,
   },
   sendBtn: {
     width: 48,
