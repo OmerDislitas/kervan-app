@@ -45,7 +45,6 @@ function RootLayoutNav() {
     // Splash: animasyonun bitmesi için sabit süre bekliyoruz.
     // Animasyon callback'e bağlı değil → hiçbir zaman takılmaz.
     const splashTimer = setTimeout(() => {
-      console.log('[Splash] splashReady = true');
       setSplashReady(true);
     }, SPLASH_DURATION_MS);
 
@@ -68,62 +67,74 @@ function RootLayoutNav() {
       setLoading(false);
     };
 
-    // Auth state listener — tek kaynak (INITIAL_SESSION dahil)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('[Auth] event:', event, '| session:', !!session);
+    let subscription: ReturnType<typeof supabase.auth.onAuthStateChange>['data']['subscription'] | null = null;
 
-        if (event === 'SIGNED_OUT') {
-          queryClient.clear();
-          setSession(null);
-          setLoading(false);
-          return;
-        }
+    const initAuth = async () => {
+      // Geçersiz (expired/revoked) refresh token'ı burada yakala.
+      // Yakalanmazsa Supabase bunu unhandled promise rejection olarak fırlatır.
+      const { error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) {
+        console.warn('[Auth] Geçersiz session temizlendi:', sessionError.message);
+        await clearStaleSession();
+        return;
+      }
 
-        if (event === 'TOKEN_REFRESHED' && !session) {
-          queryClient.clear();
-          setSession(null);
-          setLoading(false);
-          return;
-        }
+      // Auth state listener — tek kaynak (INITIAL_SESSION dahil)
+      const { data } = supabase.auth.onAuthStateChange(
+        async (event, session) => {
+  
+          if (event === 'SIGNED_OUT') {
+            queryClient.clear();
+            setSession(null);
+            setLoading(false);
+            return;
+          }
 
-        if (!session) {
-          queryClient.clear();
-          setSession(null);
-          setLoading(false);
-          return;
-        }
+          if (event === 'TOKEN_REFRESHED' && !session) {
+            await clearStaleSession();
+            return;
+          }
 
-        // Geçersiz refresh token hatası
-        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-          try {
-            setSession(session);
-            await fetchProfile(session.user.id);
+          if (!session) {
+            queryClient.clear();
+            setSession(null);
+            setLoading(false);
+            return;
+          }
 
-            if (event === 'SIGNED_IN') {
-              // Bildirim izni ve token kaydı sadece giriş sırasında
-              const enabled = useSettingsStore.getState().notificationsEnabled;
-              if (enabled) {
-                const granted = await requestPermissions();
-                if (granted) {
-                  await registerPushToken(session.user.id);
+          if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+            try {
+              setSession(session);
+              await fetchProfile(session.user.id);
+
+              if (event === 'SIGNED_IN') {
+                // Bildirim izni ve token kaydı sadece giriş sırasında
+                const enabled = useSettingsStore.getState().notificationsEnabled;
+                if (enabled) {
+                  const granted = await requestPermissions();
+                  if (granted) {
+                    await registerPushToken(session.user.id);
+                  }
                 }
               }
+            } catch (err) {
+              console.error('[Auth] Session init error:', err);
+            } finally {
+              setLoading(false);
             }
-          } catch (err) {
-            console.error('[Auth] Session init error:', err);
-          } finally {
-            setLoading(false);
+            return;
           }
-          return;
+
+          setSession(session);
+          setLoading(false);
         }
+      );
+      subscription = data.subscription;
+    };
 
-        setSession(session);
-        setLoading(false);
-      }
-    );
+    initAuth();
 
-    return () => subscription.unsubscribe();
+    return () => subscription?.unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -143,29 +154,22 @@ function RootLayoutNav() {
 
   // Routing effect — hem splash hem auth tamamlanınca çalışır
   useEffect(() => {
-    console.log('[Routing] isLoading:', isLoading, '| splashReady:', splashReady, '| session:', !!session, '| profile:', !!profile);
-
     if (isLoading || !splashReady) return;
 
     const inAuthGroup = segments[0] === '(auth)';
     const isOnboarding = segments[1] === 'onboarding';
 
     if (!session && !inAuthGroup) {
-      console.log('[Routing] → login');
       router.replace('/(auth)/login');
     } else if (session) {
       if (profile === null) {
-        // isLoading false ama profile null: fetchProfile başarısız oldu → login
-        console.log('[Routing] session var ama profile null → login');
         router.replace('/(auth)/login');
         return;
       }
 
       if (!profile.username && !isOnboarding) {
-        console.log('[Routing] → onboarding');
         router.replace('/(app)/onboarding');
       } else if (profile.username && (inAuthGroup || isOnboarding || (segments as string[]).length === 0)) {
-        console.log('[Routing] → (app)');
         router.replace('/(app)');
       }
     }

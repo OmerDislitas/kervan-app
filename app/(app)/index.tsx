@@ -6,7 +6,6 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeColors } from '@/constants/theme';
-import { useTourStore } from '@/stores/tourStore';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
 import {
@@ -20,7 +19,6 @@ import {
 } from '@/lib/notificationService';
 import { useSettingsStore } from '@/stores/settingsStore';
 
-import { useFocusTimer, createProfilerHandler } from '@/lib/debugPerf';
 import { HomeHeader } from './_components/HomeHeader';
 import { HomeHero } from './_components/HomeHero';
 import { QuestionOfTheWeek } from './_components/QuestionOfTheWeek';
@@ -84,7 +82,6 @@ export default function HomeScreen() {
   const themeColors = useThemeColors();
   const router = useRouter();
   const { profile, fetchProfile } = useAuthStore();
-  const { setShowTour } = useTourStore();
   const insets = useSafeAreaInsets();
 
   // Tab bar yüksekliği + bottom inset + ekstra boşluk — her cihazda güvenli
@@ -145,8 +142,7 @@ export default function HomeScreen() {
           scheduleDailyFactsNotification();
         }
       }
-    } catch (e) {
-      console.log('checkNotificationsFirstPrompt error:', e);
+    } catch {
     }
   }
 
@@ -194,21 +190,16 @@ export default function HomeScreen() {
         promises.push(fetchProfile(profile.id));
       }
       await Promise.all(promises);
-    } catch (e) {
-      console.error('Home refresh error:', e);
+    } catch {
     } finally {
       setRefreshing(false);
     }
   }, [profile?.id, refetchNextEvent, refetchUpcomingEvents, refetchQuestions, refetchRanking, fetchProfile]);
 
-  useFocusTimer('HomeScreen');
-
   const userInitial = profile?.full_name ? profile.full_name.charAt(0).toUpperCase() : 'K';
-  const homeProfilerHandler = React.useMemo(() => createProfilerHandler('HomeScreen'), []);
 
   // Stabil callback referansları — React.memo olan alt bileşenlerin bypass edilmesini önler
   const handlePressProfile = React.useCallback(() => router.push('/(app)/profile'), [router]);
-  const handlePressTour = React.useCallback(() => setShowTour(true), [setShowTour]);
   const handlePressRanking = React.useCallback(() => setShowRanking(true), []);
   const handlePressEvents = React.useCallback(() => router.push('/(app)/events'), [router]);
   const handlePressSozSende = React.useCallback(() => router.push('/(app)/soz-sende'), [router]);
@@ -229,7 +220,6 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: themeColors.background }} edges={['top']}>
-      <React.Profiler id="HomeScreen" onRender={homeProfilerHandler}>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingVertical: 16, paddingBottom: tabBarHeight }}
@@ -241,7 +231,6 @@ export default function HomeScreen() {
           userInitial={userInitial}
           userName={profile?.full_name || 'Kullanıcı'}
           onPressProfile={handlePressProfile}
-          onPressTour={handlePressTour}
           onPressRanking={handlePressRanking}
         />
 
@@ -274,8 +263,6 @@ export default function HomeScreen() {
           onPressAll={handlePressAllEvents}
         />
       </ScrollView>
-
-      </React.Profiler>
       <RankingModal
         visible={showRanking}
         onClose={handleCloseRanking}

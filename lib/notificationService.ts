@@ -42,7 +42,6 @@ Notifications.setNotificationHandler({
  */
 export async function requestPermissions(): Promise<boolean> {
   if (!Device.isDevice) {
-    console.log('[Notifications] Fiziksel cihaz gerekli, izin atlandı.');
     return false;
   }
 
@@ -55,7 +54,6 @@ export async function requestPermissions(): Promise<boolean> {
   }
 
   if (finalStatus !== 'granted') {
-    console.log('[Notifications] Bildirim izni reddedildi.');
     return false;
   }
 
@@ -78,7 +76,6 @@ export async function requestPermissions(): Promise<boolean> {
 export async function registerPushToken(userId: string): Promise<void> {
   // Expo Go'da SDK 53+ Android push notification desteği kaldırıldı — sessizce atla
   if (IS_EXPO_GO) {
-    console.log('[Notifications] Expo Go ortamı: Push token kaydı atlandı (development build gerekli).');
     return;
   }
 
@@ -91,7 +88,6 @@ export async function registerPushToken(userId: string): Promise<void> {
       const tokenData = await Notifications.getExpoPushTokenAsync();
       token = tokenData.data;
     } catch {
-      console.log('[Notifications] Push token alınamadı (dev ortamı — normal).');
       return;
     }
 
@@ -104,8 +100,6 @@ export async function registerPushToken(userId: string): Promise<void> {
 
     if (error) {
       console.error('[Notifications] Push token kaydedilemedi:', error.message);
-    } else {
-      console.log('[Notifications] Push token kaydedildi:', token);
     }
   } catch (err) {
     console.error('[Notifications] registerPushToken hatası:', err);
@@ -116,7 +110,6 @@ export async function registerPushToken(userId: string): Promise<void> {
 export async function cancelAllNotifications(): Promise<void> {
   try {
     await Notifications.cancelAllScheduledNotificationsAsync();
-    console.log('[Notifications] Tüm zamanlanmış bildirimler iptal edildi.');
   } catch (err) {
     console.error('[Notifications] cancelAllNotifications hatası:', err);
   }
@@ -171,7 +164,6 @@ export async function scheduleEventReminder(event: {
       });
 
       await saveToPanelHistory(notifId, title, body, 'event-reminder', event.id);
-      console.log(`[Notifications] Hatırlatıcı planlandı (24 saat öncesi): ${event.title}`);
     }
   } catch (err) {
     console.error('[Notifications] scheduleEventReminder hatası:', err);
@@ -184,7 +176,6 @@ export async function scheduleEventReminder(event: {
 export async function cancelEventReminder(eventId: string): Promise<void> {
   try {
     await Notifications.cancelScheduledNotificationAsync(`event-reminder-${eventId}`);
-    console.log(`[Notifications] Hatırlatıcı iptal edildi: ${eventId}`);
   } catch (err) {
     console.error('[Notifications] cancelEventReminder hatası:', err);
   }
@@ -244,7 +235,6 @@ export async function scheduleWeeklyFridayMessage(): Promise<void> {
       },
     });
     
-    console.log('[Notifications] Haftalık Cuma mesajı planlandı (Her Cuma 09:00).');
   } catch (err) {
     console.error('[Notifications] scheduleWeeklyFridayMessage hatası:', err);
   }
@@ -335,7 +325,6 @@ export async function scheduleDailyWisdom(): Promise<void> {
       });
     }
 
-    console.log(`[Notifications] Günlük söz bildirimleri planlandı (önümüzdeki ${DAYS_AHEAD} gün, her gün 10:00).`);
   } catch (err) {
     console.error('[Notifications] scheduleDailyWisdom hatası:', err);
   }
@@ -367,7 +356,6 @@ export async function scheduleDailyCompass(): Promise<void> {
       },
     });
     
-    console.log('[Notifications] Günlük pusula bildirimi planlandı (Her gün 12:00).');
   } catch (err) {
     console.error('[Notifications] scheduleDailyCompass hatası:', err);
   }
@@ -400,7 +388,6 @@ export async function scheduleDailyFactsNotification(): Promise<void> {
       },
     });
 
-    console.log('[Notifications] Günlük hap bilgileri bildirimi planlandı (Her gün 17:00).');
   } catch (err) {
     console.error('[Notifications] scheduleDailyFactsNotification hatası:', err);
   }
@@ -431,20 +418,10 @@ export async function sendPushNotification(
     }
 
     const { type: _t, ...extra } = data;
-    const { error } = await supabase.functions.invoke('send-notification', {
+    await supabase.functions.invoke('send-notification', {
       body: { targetUserId, type, data: extra },
     });
-
-    // Bildirim "best-effort"tür: başarısız olması ana akışı (takip/yorum/beğeni)
-    // etkilemez. Bu yüzden console.error DEĞİL console.log kullanılır —
-    // aksi halde Metro bunu kırmızı hata kutusu olarak gösterir.
-    if (error) {
-      console.log('[Notifications] send-notification gönderilemedi (yok sayıldı):', error.message);
-    } else {
-      console.log(`[Notifications] Bildirim isteği gönderildi: ${targetUserId} (${type})`);
-    }
-  } catch (err: any) {
-    console.log('[Notifications] sendPushNotification atlandı:', err?.message ?? err);
+  } catch {
   }
 }
 

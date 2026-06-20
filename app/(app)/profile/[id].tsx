@@ -62,7 +62,6 @@ async function fetchUserEvents(userId: string): Promise<MyEvent[]> {
 }
 
 async function fetchProfileStats(userId: string) {
-  console.log('[fetchProfileStats User] fetching stats for userId:', userId);
   const [comments, profileData, followData] = await Promise.all([
     supabase.from('question_comments').select('*', { count: 'exact', head: true }).eq('user_id', userId),
     supabase.from('profiles').select('points').eq('id', userId).single(),
@@ -70,7 +69,6 @@ async function fetchProfileStats(userId: string) {
   ]);
 
   const follows = followData.data?.[0] || { followers_count: 0, following_count: 0 };
-  console.log('[fetchProfileStats User] result - follows:', follows, 'points:', profileData.data?.points);
 
   return {
     commentsCount: comments.count || 0,
@@ -92,6 +90,18 @@ async function checkFollowStatus(followerId: string, followingId: string) {
   return data; // { id, status, ... } or null
 }
 
+async function checkFollowBackStatus(followerId: string, followingId: string) {
+  const { data, error } = await supabase
+    .from('follows')
+    .select('*')
+    .eq('follower_id', followerId)
+    .eq('following_id', followingId)
+    .maybeSingle();
+  
+  if (error) throw error;
+  return data;
+}
+
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { profile: currentProfile } = useAuthStore();
@@ -107,6 +117,7 @@ export default function UserProfileScreen() {
         queryClient.invalidateQueries({ queryKey: ['user-events', id] }),
         queryClient.invalidateQueries({ queryKey: ['profile-stats', id] }),
         queryClient.invalidateQueries({ queryKey: ['follow-status', currentProfile?.id, id] }),
+        queryClient.invalidateQueries({ queryKey: ['follow-back-status', currentProfile?.id, id] }),
       ]);
     } catch (e) {
       console.error('onRefresh user error:', e);
@@ -144,8 +155,15 @@ export default function UserProfileScreen() {
     enabled: !!id && !!currentProfile?.id,
   });
 
+  const { data: followBackRecord } = useQuery({
+    queryKey: ['follow-back-status', currentProfile?.id, id],
+    queryFn: () => checkFollowBackStatus(id, currentProfile!.id),
+    enabled: !!id && !!currentProfile?.id,
+  });
+
   const isFollowing = followRecord?.status === 'accepted';
   const isPending = followRecord?.status === 'pending';
+  const isMutual = isFollowing && followBackRecord?.status === 'accepted';
 
   const followMutation = useMutation({
     mutationFn: async () => {
@@ -248,6 +266,22 @@ export default function UserProfileScreen() {
     }
   };
 
+  const handleFollowersPress = () => {
+    if (isMutual) {
+      router.push({ pathname: '/(app)/profile/follows', params: { userId: id, initialTab: 'followers' } });
+    } else {
+      Alert.alert('Erişim Sınırlandırıldı 🔒', 'Bu kullanıcının takipçi listesini görmek için karşılıklı takipleşmeniz gerekmektedir.');
+    }
+  };
+
+  const handleFollowingPress = () => {
+    if (isMutual) {
+      router.push({ pathname: '/(app)/profile/follows', params: { userId: id, initialTab: 'following' } });
+    } else {
+      Alert.alert('Erişim Sınırlandırıldı 🔒', 'Bu kullanıcının takip edilenler listesini görmek için karşılıklı takipleşmeniz gerekmektedir.');
+    }
+  };
+
   const badgeStats: UserBadgeStats = React.useMemo(() => ({
     commentsCount: stats?.commentsCount ?? 0,
     points: stats?.points ?? 0,
@@ -335,17 +369,25 @@ export default function UserProfileScreen() {
           {/* Premium İstatistik Paneli */}
           <View style={styles.statsDashboard}>
             <View style={styles.statsRow}>
-              <View style={styles.statDashboardItem}>
+              <TouchableOpacity 
+                style={styles.statDashboardItem}
+                onPress={handleFollowersPress}
+                activeOpacity={0.7}
+              >
                 <Text style={styles.statDashboardValue}>{stats?.followersCount ?? 0}</Text>
                 <Text style={styles.statDashboardLabel}>Takipçi</Text>
-              </View>
+              </TouchableOpacity>
               
               <View style={styles.statDashboardDivider} />
               
-              <View style={styles.statDashboardItem}>
+              <TouchableOpacity 
+                style={styles.statDashboardItem}
+                onPress={handleFollowingPress}
+                activeOpacity={0.7}
+              >
                 <Text style={styles.statDashboardValue}>{stats?.followingCount ?? 0}</Text>
                 <Text style={styles.statDashboardLabel}>Takip</Text>
-              </View>
+              </TouchableOpacity>
 
               <View style={styles.statDashboardDivider} />
 

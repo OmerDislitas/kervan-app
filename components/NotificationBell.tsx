@@ -12,8 +12,9 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Typography, Spacing, BorderRadius, useThemeColors } from '@/constants/theme';
-
 import { useRouter } from 'expo-router';
+import { supabase } from '@/lib/supabase';
+import { useAuthStore } from '@/stores/authStore';
 
 const STORAGE_KEY = '@kervan_notifications';
 const MAX_NOTIFICATIONS = 30;
@@ -50,15 +51,98 @@ export default function NotificationBell() {
   const styles = useMemo(() => createStyles(themeColors), [themeColors]);
   const [visible, setVisible] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [dbNotifications, setDbNotifications] = useState<NotificationItem[]>([]);
   const scaleAnim = useRef(new Animated.Value(1)).current;
   const router = useRouter();
+  const { profile } = useAuthStore();
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  // Tüm bildirimler: DB (sosyal) + yerel (push/zamanlı), tarihe göre sıralı
+  const allNotifications = useMemo(() => {
+    const merged = [...dbNotifications, ...notifications];
+    const seen = new Set<string>();
+    return merged
+      .filter((n) => { if (seen.has(n.id)) return false; seen.add(n.id); return true; })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [dbNotifications, notifications]);
+
+  const unreadCount = allNotifications.filter((n) => !n.read).length;
 
   // İlk yükleme — AsyncStorage'dan oku
   useEffect(() => {
     loadStoredNotifications().then(setNotifications);
   }, []);
+
+  // Supabase'den sosyal bildirimleri yükle + real-time dinle
+  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+
+    // Önceki kanalı temizle
+    if (channelRef.current) {
+      supabase.removeChannel(channelRef.current);
+      channelRef.current = null;
+    }
+
+    supabase
+      .from('notifications')
+      .select('*')
+      .eq('user_id', profile.id)
+      .order('created_at', { ascending: false })
+      .limit(30)
+      .then(({ data }) => {
+        if (data) {
+          setDbNotifications(
+            data.map((n: any) => ({
+              id: n.id,
+              title: n.title,
+              body: n.body,
+              date: n.created_at,
+              read: n.is_read,
+              type: n.type,
+              data: n.data,
+            }))
+          );
+        }
+      });
+
+    // Benzersiz kanal adı: her mount'ta farklı olsun
+    const channelName = `notifications:${profile.id}:${Date.now()}`;
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notifications', filter: `user_id=eq.${profile.id}` },
+        (payload) => {
+          const n = payload.new as any;
+          const item: NotificationItem = {
+            id: n.id,
+            title: n.title,
+            body: n.body,
+            date: n.created_at,
+            read: n.is_read,
+            type: n.type,
+            data: n.data,
+          };
+          setDbNotifications((prev) => {
+            if (prev.some((x) => x.id === item.id)) return prev;
+            return [item, ...prev];
+          });
+          Animated.sequence([
+            Animated.spring(scaleAnim, { toValue: 1.35, useNativeDriver: true }),
+            Animated.spring(scaleAnim, { toValue: 1, useNativeDriver: true }),
+          ]).start();
+        }
+      )
+      .subscribe();
+
+    channelRef.current = channel;
+
+    return () => {
+      supabase.removeChannel(channel);
+      channelRef.current = null;
+    };
+  }, [profile?.id]);
 
   // Yeni bildirim gelince listeye ekle + kaydet
   useEffect(() => {
@@ -91,12 +175,14 @@ export default function NotificationBell() {
     return () => sub.remove();
   }, []);
 
-  const markAsRead = (id: string) => {
+  const markAsRead = (notifId: string) => {
     setNotifications((prev) => {
-      const updated = prev.map((n) => (n.id === id ? { ...n, read: true } : n));
+      const updated = prev.map((n) => (n.id === notifId ? { ...n, read: true } : n));
       saveNotifications(updated);
       return updated;
     });
+    setDbNotifications((prev) => prev.map((n) => (n.id === notifId ? { ...n, read: true } : n)));
+    supabase.from('notifications').update({ is_read: true }).eq('id', notifId).then();
   };
 
   const markAllRead = () => {
@@ -105,11 +191,19 @@ export default function NotificationBell() {
       saveNotifications(updated);
       return updated;
     });
+    if (profile?.id) {
+      setDbNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      supabase.from('notifications').update({ is_read: true }).eq('user_id', profile.id).then();
+    }
   };
 
   const clearAll = () => {
     setNotifications([]);
     saveNotifications([]);
+    if (profile?.id) {
+      setDbNotifications([]);
+      supabase.from('notifications').delete().eq('user_id', profile.id).then();
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -122,7 +216,9 @@ export default function NotificationBell() {
     return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
   };
 
-  const getIcon = (item: NotificationItem): 'add-circle' | 'alarm' | 'calendar' => {
+  const getIcon = (item: NotificationItem): 'add-circle' | 'alarm' | 'calendar' | 'chatbubble' | 'heart' => {
+    if (item.type === 'comment-reply') return 'chatbubble';
+    if (item.type === 'comment-like') return 'heart';
     if (item.type === 'new-event') return 'add-circle';
     if (item.type === 'event-reminder') return 'alarm';
     if (item.title?.includes('Yeni')) return 'add-circle';
@@ -166,13 +262,13 @@ export default function NotificationBell() {
             <View style={styles.panelTitleRow}>
               <Ionicons name="notifications" size={18} color={themeColors.primary} />
               <Text style={styles.panelTitle}>Bildirimler</Text>
-              {notifications.length > 0 && (
+              {allNotifications.length > 0 && (
                 <View style={styles.countBadge}>
-                  <Text style={styles.countBadgeText}>{notifications.length}</Text>
+                  <Text style={styles.countBadgeText}>{allNotifications.length}</Text>
                 </View>
               )}
             </View>
-            {notifications.length > 0 && (
+            {allNotifications.length > 0 && (
               <View style={styles.headerActions}>
                 <TouchableOpacity onPress={markAllRead} style={{ marginRight: Spacing.md }}>
                   <Text style={styles.markReadText}>Hepsini Oku</Text>
@@ -185,7 +281,7 @@ export default function NotificationBell() {
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false} style={styles.list}>
-            {notifications.length === 0 ? (
+            {allNotifications.length === 0 ? (
               <View style={styles.empty}>
                 <Ionicons name="notifications-off-outline" size={40} color={themeColors.textMuted} />
                 <Text style={styles.emptyTitle}>Bildirim yok</Text>
@@ -194,14 +290,19 @@ export default function NotificationBell() {
                 </Text>
               </View>
             ) : (
-              notifications.map((item) => (
+              allNotifications.map((item) => (
                 <TouchableOpacity 
                   key={item.id} 
                   style={[styles.notifItem, !item.read && styles.notifItemUnread]}
                   onPress={() => {
                     markAsRead(item.id);
                     setVisible(false);
-                    if (item.eventId) {
+                    // Sosyal bildirimler: yoruma/beğeniye git
+                    const socialTypes = ['comment-reply', 'comment-like'];
+                    const questionId = (item as any).data?.questionId;
+                    if (socialTypes.includes(item.type || '') && questionId) {
+                      router.push(`/(app)/soz-sende/${questionId}` as any);
+                    } else if (item.eventId) {
                       router.push(`/(app)/events/${item.eventId}`);
                     } else {
                       router.push('/(app)/events');

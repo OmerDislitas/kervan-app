@@ -8,7 +8,6 @@ interface HomeHeaderProps {
   userInitial: string;
   userName: string;
   onPressProfile: () => void;
-  onPressTour: () => void;
   onPressRanking: () => void;
 }
 
@@ -16,7 +15,6 @@ export const HomeHeader = React.memo(function HomeHeader({
   userInitial,
   userName,
   onPressProfile,
-  onPressTour,
   onPressRanking,
 }: HomeHeaderProps) {
   const themeColors = useThemeColors();
@@ -39,13 +37,6 @@ export const HomeHeader = React.memo(function HomeHeader({
       </TouchableOpacity>
 
       <View style={styles.headerRight}>
-        <TouchableOpacity
-          style={styles.iconButton}
-          onPress={onPressTour}
-          activeOpacity={0.7}
-        >
-          <Ionicons name="information-circle-outline" size={22} color={themeColors.primary} />
-        </TouchableOpacity>
         <TouchableOpacity
           style={styles.iconButton}
           onPress={onPressRanking}

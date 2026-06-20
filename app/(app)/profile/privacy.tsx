@@ -5,11 +5,14 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Typography, Spacing, BorderRadius, useThemeColors } from '@/constants/theme';
+
+const SUPPORT_EMAIL = 'kervanapp@gmail.com';
 
 const LAST_UPDATED = '31 Mayıs 2026';
 
@@ -107,7 +110,7 @@ Bildirim tercihlerinizi Ayarlar > Tercihler bölümünden dilediğiniz zaman de�
 
 ✦ Taşınabilirlik Hakkı: Verilerinizin yapılandırılmış bir formatta tarafınıza iletilmesini talep edebilirsiniz.
 
-Bu haklarınızı kullanmak için destek@kervanapp.com adresine yazabilirsiniz.`,
+Bu haklarınızı kullanmak için kervanapp@gmail.com adresine yazabilirsiniz.`,
   },
   {
     icon: 'time-outline' as const,
@@ -130,7 +133,7 @@ Uygulamayı kullanmaya devam etmeniz, güncel politikayı kabul ettiğiniz anlam
     title: '9. İletişim ve Başvuru',
     content: `Gizlilik Politikamıza ilişkin sorularınız, talepleriniz veya şikayetleriniz için:
 
-📧 destek@kervanapp.com
+📧 kervanapp@gmail.com
 
 Tarafımıza iletilen başvurular en geç 15 iş günü içinde yanıtlanacaktır. Resmi başvurularınızı yazılı olarak iletmenizi öneririz.`,
   },
@@ -184,6 +187,16 @@ export default function PrivacyScreen() {
               <Text style={styles.sectionTitle}>{section.title}</Text>
             </View>
             <Text style={styles.sectionBody}>{section.content}</Text>
+            {section.icon === 'mail-outline' && (
+              <TouchableOpacity
+                style={styles.emailButton}
+                onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)}
+                activeOpacity={0.75}
+              >
+                <Ionicons name="mail" size={16} color="#fff" />
+                <Text style={styles.emailButtonText}>{SUPPORT_EMAIL}</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ))}
 
@@ -333,5 +346,21 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     color: themeColors.textMuted,
     flex: 1,
     lineHeight: 18,
+  },
+  emailButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#22C55E',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.lg,
+    alignSelf: 'flex-start',
+    marginTop: Spacing.md,
+  },
+  emailButtonText: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: '700',
+    color: '#fff',
   },
 });

@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { Colors, Typography, Spacing, BorderRadius } from '@/constants/theme';
+import { useTourStore } from '@/stores/tourStore';
 
 export default function OnboardingScreen() {
   const router = useRouter();
@@ -66,8 +67,9 @@ export default function OnboardingScreen() {
 
       if (error) throw error;
 
-      // Profili yeniden çek ve ana sayfaya yönlendir
+      // Profili yeniden çek, tour'u başlat ve ana sayfaya yönlendir
       await fetchProfile(profile!.id);
+      useTourStore.getState().setShowTour(true);
       router.replace('/(app)');
     } catch (error: any) {
       Alert.alert('Hata', error.message || 'Kullanıcı adı kaydedilirken bir hata oluştu.');

@@ -262,8 +262,7 @@ export const CompassCard = React.memo(function CompassCard() {
         default:
           verified = true;
       }
-    } catch (e) {
-      console.log('Verification error', e);
+    } catch {
       verified = true;
     }
 
@@ -285,8 +284,7 @@ export const CompassCard = React.memo(function CompassCard() {
             return;
           }
         }
-      } catch (e) {
-        console.log('Puan güncelleme hatası', e);
+      } catch {
       }
     }
     Alert.alert('Tebrikler 🎉', `Görevini başarıyla tamamladın ve ${COMPASS_POINTS} puan kazandın!`);

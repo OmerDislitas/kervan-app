@@ -44,7 +44,6 @@ export default function AdminSozSende() {
       };
 
       if (editingId) {
-        console.log('Updating question:', editingId, questionData);
         const { error } = await supabase
           .from('weekly_questions')
           .update(questionData)
@@ -56,7 +55,6 @@ export default function AdminSozSende() {
           is_active: true,
           created_by: profile.id,
         };
-        console.log('Inserting question:', insertData);
         const { error } = await supabase
           .from('weekly_questions')
           .insert(insertData);

@@ -82,7 +82,6 @@ export default function LoginScreen() {
             />
           </View>
           <Text style={styles.appName}>Kervan</Text>
-          <Text style={styles.tagline}>İstanbul'un Gençlik Platformu</Text>
         </View>
 
         {/* Form */}

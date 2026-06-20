@@ -10,10 +10,8 @@ import AppTourModal from '@/components/AppTourModal';
 import { useTourStore } from '@/stores/tourStore';
 import { fetchOrganizations, fetchActiveEventsCount } from './events/index';
 import { fetchDailyFacts } from './explore/index';
-import { useJSThreadProbe } from '@/lib/debugPerf';
 
 export default function AppLayout() {
-  useJSThreadProbe('TabLayout');
   const insets = useSafeAreaInsets();
   const { isAdmin } = useAuthStore();
   const themeColors = useThemeColors();
@@ -50,6 +48,7 @@ export default function AppLayout() {
         // "Anında geçiş" hedefi freezeOnBlur + ekran-içi optimizasyon + veri
         // prefetch (Faz 3) ile sağlanır.
         lazy: true,
+        tabBarHideOnKeyboard: true,
         tabBarStyle: {
           backgroundColor: themeColors.surface,
           borderTopColor: themeColors.border,
@@ -62,19 +61,15 @@ export default function AppLayout() {
         },
         tabBarActiveTintColor: themeColors.tabActive,
         tabBarInactiveTintColor: themeColors.tabInactive,
-        tabBarLabelStyle: {
-          fontSize: Typography.fontSize.xs,
-          fontWeight: '600',
-          marginTop: 2,
-        },
+        tabBarShowLabel: false,
       }}
     >
       <Tabs.Screen
         name="index"
         options={{
           title: 'Ana Sayfa',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="home" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="home" size={28} color={color} />
           ),
         }}
       />
@@ -82,8 +77,8 @@ export default function AppLayout() {
         name="explore/index"
         options={{
           title: 'Keşfet',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="compass" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="compass" size={28} color={color} />
           ),
         }}
       />
@@ -91,8 +86,8 @@ export default function AppLayout() {
         name="soz-sende"
         options={{
           title: 'Söz Sende',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="chatbubbles" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="chatbubbles" size={28} color={color} />
           ),
         }}
         listeners={({ navigation }) => ({
@@ -106,8 +101,8 @@ export default function AppLayout() {
         name="events"
         options={{
           title: 'Etkinlikler',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="calendar" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="calendar" size={28} color={color} />
           ),
         }}
       />
@@ -115,8 +110,8 @@ export default function AppLayout() {
         name="profile"
         options={{
           title: 'Hesabım',
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="person" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="person" size={28} color={color} />
           ),
         }}
         listeners={({ navigation }) => ({
@@ -132,8 +127,8 @@ export default function AppLayout() {
         options={{
           title: 'Admin',
           href: isAdmin ? undefined : null,
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="shield-checkmark" size={size} color={color} />
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="shield-checkmark" size={28} color={color} />
           ),
         }}
       />
@@ -150,8 +145,10 @@ export default function AppLayout() {
       <Tabs.Screen name="_components/RankingModal" options={{ href: null }} />
       <Tabs.Screen name="explore/_components/ExploreHeader" options={{ href: null }} />
       <Tabs.Screen name="explore/_components/StoryModal" options={{ href: null }} />
+      <Tabs.Screen name="explore/_components/CategoryBar" options={{ href: null }} />
+      <Tabs.Screen name="explore/_components/FactCardList" options={{ href: null }} />
     </Tabs>
-      <AppTourModal visible={showTour} onClose={() => setShowTour(false)} />
+      {showTour && <AppTourModal visible={showTour} onClose={() => setShowTour(false)} />}
     </>
   );
 }

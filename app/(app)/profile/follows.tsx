@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Dimensions,
+  Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
@@ -36,15 +37,33 @@ export default function FollowsScreen() {
   const { profile: currentUser } = useAuthStore();
   const router = useRouter();
 
-  // Privacy check: only allow viewing own follow lists
+  // Privacy check: only allow viewing own follow lists or mutual follows
   const isOwnProfile = userId === currentUser?.id;
+
+  // Mutual follow check
+  const { data: isMutual, isLoading: isMutualCheckLoading } = useQuery({
+    queryKey: ['mutual-follow-check', currentUser?.id, userId],
+    queryFn: async () => {
+      if (!currentUser?.id || !userId || currentUser.id === userId) return false;
+      const { data: records, error } = await supabase
+        .from('follows')
+        .select('*')
+        .or(`and(follower_id.eq.${currentUser.id},following_id.eq.${userId},status.eq.accepted),and(follower_id.eq.${userId},following_id.eq.${currentUser.id},status.eq.accepted)`);
+      
+      if (error) throw error;
+      return (records?.length ?? 0) === 2;
+    },
+    enabled: !!currentUser?.id && !!userId && userId !== currentUser.id,
+  });
+
+  const isAllowed = isOwnProfile || isMutual === true;
 
   const [searchQuery, setSearchQuery] = useState('');
 
   const { data: list = [], isLoading, refetch } = useQuery({
     queryKey: ['follows', userId, activeTab],
     queryFn: async () => {
-      if (!isOwnProfile) return [];
+      if (!isAllowed) return [];
 
       const isFollowers = activeTab === 'followers';
       const selectCol = isFollowers ? 'follower_id' : 'following_id';
@@ -67,7 +86,7 @@ export default function FollowsScreen() {
       const result = (data as any[] || []).filter(item => !!item.profiles);
       return result as FollowItem[];
     },
-    enabled: !!userId && !!currentUser?.id,
+    enabled: !!userId && !!currentUser?.id && isAllowed,
   });
 
   const filteredList = list.filter(item => 
@@ -77,14 +96,28 @@ export default function FollowsScreen() {
     )
   );
 
-  // Redirect if not own profile
+  // Redirect if not allowed
   React.useEffect(() => {
-    if (userId && currentUser?.id && !isOwnProfile) {
+    if (userId && currentUser?.id && !isOwnProfile && isMutual === false) {
+      Alert.alert(
+        'Erişim Sınırlandırıldı 🔒', 
+        'Bu kullanıcının takipçi listesini görmek için karşılıklı takipleşmeniz gerekmektedir.'
+      );
       router.replace('/(app)/profile');
     }
-  }, [userId, currentUser?.id, isOwnProfile]);
+  }, [userId, currentUser?.id, isOwnProfile, isMutual]);
 
-  if (!isOwnProfile) return null;
+  if (userId && currentUser?.id && !isOwnProfile && isMutual === undefined) {
+    return (
+      <SafeAreaView style={styles.container} edges={['top']}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator color={themeColors.primary} size="large" />
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (!isAllowed) return null;
 
   const renderItem = ({ item }: { item: FollowItem }) => {
     const p = item.profiles;

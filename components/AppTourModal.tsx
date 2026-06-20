@@ -162,7 +162,7 @@ export default function AppTourModal({ visible, onClose }: AppTourModalProps) {
       visible={visible}
       transparent
       animationType="fade"
-      onRequestClose={onClose}
+      onRequestClose={() => {}}
     >
       <View style={styles.container}>
         {/* Transparent dark overlay to keep the app visible in background */}
@@ -239,19 +239,17 @@ export default function AppTourModal({ visible, onClose }: AppTourModalProps) {
                 onPress={handleNext}
               >
                 <Text style={styles.btnTextPrimary}>
-                  {currentIndex === TOUR_SLIDES.length - 1 ? 'Bitir' : 'İleri'}
+                  {currentIndex === TOUR_SLIDES.length - 1 ? 'Başla' : 'İleri'}
                 </Text>
-                <Ionicons 
-                  name={currentIndex === TOUR_SLIDES.length - 1 ? 'checkmark' : 'arrow-forward'} 
-                  size={16} 
-                  color="#fff" 
-                />
+                {currentIndex !== TOUR_SLIDES.length - 1 && (
+                  <Ionicons 
+                    name="arrow-forward" 
+                    size={16} 
+                    color="#fff" 
+                  />
+                )}
               </TouchableOpacity>
             </View>
-
-            <TouchableOpacity style={styles.closeAbsolute} onPress={onClose}>
-              <Ionicons name="close-circle" size={28} color="rgba(0,0,0,0.3)" />
-            </TouchableOpacity>
 
           </View>
         </Animated.View>

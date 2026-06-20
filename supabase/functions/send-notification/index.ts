@@ -88,8 +88,26 @@ Deno.serve(async (req) => {
     return json({ ok: true, skipped: 'self' });
   }
 
-  // 3) Hedefin push token'ını service_role ile SUNUCUDA oku.
+  // 3) admin client oluştur (service_role — RLS bypass)
   const admin = createClient(SUPABASE_URL, SERVICE_ROLE);
+
+  // 4) Uygulama içi bildirimi notifications tablosuna yaz (service_role → RLS bypass)
+  const { error: notifInsertErr } = await admin
+    .from('notifications')
+    .insert({
+      user_id: targetUserId,
+      type,
+      title: template.title,
+      body: template.body,
+      data: payload.data ?? {},
+    });
+
+  if (notifInsertErr) {
+    console.error('[send-notification] DB insert hatası:', notifInsertErr.message);
+    // DB insert başarısız olsa bile push göndermeye devam et
+  }
+
+  // 5) Hedefin push token'ını sunucuda oku.
   const { data: profile, error: profErr } = await admin
     .from('profiles')
     .select('push_token')
@@ -97,11 +115,11 @@ Deno.serve(async (req) => {
     .single();
 
   if (profErr || !profile?.push_token) {
-    // Token yok / kullanıcı bildirimleri kapalı — istemciye token sızdırma.
-    return json({ ok: true, delivered: false });
+    // Token yok / kullanıcı bildirimleri kapalı — DB zaten yazıldı.
+    return json({ ok: true, delivered: false, db: !notifInsertErr });
   }
 
-  // 4) Expo Push API'ye gönder. Başlık/gövde sunucu şablonundan.
+  // 6) Expo Push API'ye gönder. Başlık/gövde sunucu şablonundan.
   const message = {
     to: profile.push_token,
     sound: 'default',
@@ -122,8 +140,8 @@ Deno.serve(async (req) => {
 
   if (!expoRes.ok) {
     const text = await expoRes.text();
-    return json({ ok: false, error: 'Expo gönderimi başarısız', detail: text }, 502);
+    return json({ ok: false, error: 'Expo gönderimi başarısız', detail: text, db: !notifInsertErr }, 502);
   }
 
-  return json({ ok: true, delivered: true });
+  return json({ ok: true, delivered: true, db: !notifInsertErr });
 });

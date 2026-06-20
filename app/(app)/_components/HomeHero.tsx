@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, ImageBackground } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet, ImageBackground, Dimensions } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { Typography, Spacing, BorderRadius, useThemeColors } from '@/constants/theme';
+
+const SMALL_SCREEN = Dimensions.get('window').width < 380;
 
 interface HomeHeroProps {
   onPressEvents: () => void;
@@ -93,12 +95,12 @@ const createStyles = (themeColors: any) =>
       maxWidth: '90%',
     },
     heroActionRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: SMALL_SCREEN ? 'column' : 'row',
+      alignItems: 'stretch',
       gap: Spacing.sm,
     },
     heroMainAction: {
-      flex: 1,
+      flex: SMALL_SCREEN ? undefined : 1,
       backgroundColor: themeColors.primary,
       paddingVertical: 12,
       paddingHorizontal: 12,
@@ -117,7 +119,7 @@ const createStyles = (themeColors: any) =>
       textAlign: 'center',
     },
     heroSecondaryAction: {
-      flex: 1,
+      flex: SMALL_SCREEN ? undefined : 1,
       backgroundColor: 'rgba(255,255,255,0.15)',
       paddingVertical: 12,
       paddingHorizontal: 12,

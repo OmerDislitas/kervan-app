@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,8 +15,9 @@ import {
   Animated,
   Modal,
   RefreshControl,
+  Keyboard,
 } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Typography, Spacing, BorderRadius, useThemeColors } from '@/constants/theme';
@@ -59,6 +60,10 @@ export default function QuestionDetailScreen() {
   const themeColors = useThemeColors();
   const styles = useMemo(() => createStyles(themeColors), [themeColors]);
   const authorStyles = useMemo(() => createAuthorStyles(themeColors), [themeColors]);
+  const navigation = useNavigation();
+
+
+
   const [newComment, setNewComment] = useState('');
   const [replyTo, setReplyTo] = useState<{ id: string, name: string } | null>(null);
   
@@ -98,20 +103,42 @@ export default function QuestionDetailScreen() {
     onSuccess: (newCommentData) => {
       setNewComment('');
       setReplyTo(null);
+      Keyboard.dismiss();
+      
+      // Eğer yanıt ise parent comment'i otomatik genişlet
+      if (newCommentData.parent_id) {
+        setExpandedComments((prev) => {
+          if (prev.includes(newCommentData.parent_id)) return prev;
+          return [...prev, newCommentData.parent_id];
+        });
+      }
+
       queryClient.setQueryData(['comments', id], (old: any[] = []) => [...old, newCommentData]);
       queryClient.invalidateQueries({ queryKey: ['profile-stats', profile?.id] });
       queryClient.invalidateQueries({ queryKey: ['trend-questions-explore'] });
       AsyncStorage.setItem('@kervan_last_comment_time', Date.now().toString()).catch(() => {});
-      
-      // Send notification if it's a reply to someone else's comment
+
+      const senderName = profile?.full_name || 'Biri';
+
       if (newCommentData.parent_id) {
+        // Yanıt: üst yorumun sahibine bildirim
         const parentComment = comments.find(c => c.id === newCommentData.parent_id);
         if (parentComment && parentComment.user_id !== profile?.id) {
           sendPushNotification(
             parentComment.user_id,
             'Yorumuna Yanıt Geldi! 💬',
             'Paylaştığın yoruma yeni bir yanıt yazıldı.',
-            { type: 'comment-reply', questionId: id }
+            { type: 'comment-reply', questionId: id, commentId: newCommentData.id }
+          ).catch(() => {});
+        }
+      } else {
+        // Yeni ana yorum: soru sahibine bildirim
+        if (question && question.user_id && question.user_id !== profile?.id) {
+          sendPushNotification(
+            question.user_id,
+            'Sorunuza Yeni Yorum! 💬',
+            `${senderName} sorunuza yorum yaptı.`,
+            { type: 'comment-reply', questionId: id, commentId: newCommentData.id }
           ).catch(() => {});
         }
       }
@@ -186,7 +213,7 @@ export default function QuestionDetailScreen() {
             comment.user_id,
             'Yorumun Beğenildi! ❤️',
             'Yorumun topluluktan bir beğeni aldı.',
-            { type: 'comment-like', questionId: id }
+            { type: 'comment-like', questionId: id, commentId: variables.commentId }
           ).catch(() => {});
         }
       }
@@ -372,8 +399,8 @@ export default function QuestionDetailScreen() {
     <SafeAreaView style={styles.container} edges={['top']}>
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         {/* Modern Header */}
         <View style={styles.topHeader}>
@@ -393,6 +420,8 @@ export default function QuestionDetailScreen() {
           style={{ flex: 1 }}
           contentContainerStyle={styles.scrollArea}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           refreshControl={
             <RefreshControl
               refreshing={isCommentsRefetching}
@@ -468,10 +497,13 @@ export default function QuestionDetailScreen() {
                 onChangeText={setNewComment}
                 multiline
                 maxLength={280}
+                scrollEnabled={true}
               />
-              <Text style={[styles.charCounter, newComment.length >= 260 && { color: newComment.length >= 280 ? themeColors.error : themeColors.primary }]}>
-                {newComment.length}/280
-              </Text>
+              <View style={styles.counterRow}>
+                <Text style={[styles.charCounter, newComment.length >= 260 && { color: newComment.length >= 280 ? themeColors.error : themeColors.primary }]}>
+                  {newComment.length}/280
+                </Text>
+              </View>
             </View>
             <TouchableOpacity 
               style={[styles.sendBtn, !newComment.trim() && styles.sendBtnDisabled]} 
@@ -559,7 +591,7 @@ export default function QuestionDetailScreen() {
         onRequestClose={() => setEditModalVisible(false)}
       >
         <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
           style={styles.modalOverlay}
         >
           <View style={styles.editContent}>
@@ -570,14 +602,22 @@ export default function QuestionDetailScreen() {
               </TouchableOpacity>
             </View>
 
-            <TextInput
-              style={styles.editInput}
-              value={editContent}
-              onChangeText={setEditContent}
-              multiline
-              maxLength={1000}
-              autoFocus
-            />
+            <View style={styles.editInputWrapper}>
+              <TextInput
+                style={styles.editInput}
+                value={editContent}
+                onChangeText={setEditContent}
+                multiline
+                maxLength={280}
+                autoFocus
+                scrollEnabled={true}
+              />
+              <View style={styles.editCounterRow}>
+                <Text style={[styles.charCounter, editContent.length >= 260 && { color: editContent.length >= 280 ? themeColors.error : themeColors.primary }]}>
+                  {editContent.length}/280
+                </Text>
+              </View>
+            </View>
 
             <View style={styles.editActions}>
               <TouchableOpacity 
@@ -698,38 +738,27 @@ const createStyles = (themeColors: any) => StyleSheet.create({
   },
   commentWrapper: {
     paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: themeColors.border,
   },
   replyWrapper: {
-    marginLeft: 30,
-    marginTop: -Spacing.xs,
+    marginLeft: 28,
     position: 'relative',
   },
   replyConnector: {
     position: 'absolute',
-    left: -15,
+    left: -14,
     top: 0,
-    bottom: 20,
+    bottom: 0,
     width: 2,
     backgroundColor: themeColors.border,
     borderRadius: 1,
   },
   commentCard: {
-    backgroundColor: themeColors.surface,
-    borderRadius: BorderRadius.xl,
-    padding: Spacing.md,
-    borderWidth: 1,
-    borderColor: themeColors.border,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    backgroundColor: 'transparent',
   },
-  likedCard: {
-    borderColor: themeColors.primary + '40',
-    backgroundColor: themeColors.primary + '05',
-  },
+  likedCard: {},
   commentHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -797,9 +826,7 @@ const createStyles = (themeColors: any) => StyleSheet.create({
   commentFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: themeColors.border + '30',
-    paddingTop: Spacing.sm,
+    paddingTop: Spacing.xs,
   },
   actionBtn: {
     flexDirection: 'row',
@@ -896,24 +923,32 @@ const createStyles = (themeColors: any) => StyleSheet.create({
   inputWrapper: {
     flex: 1,
     backgroundColor: themeColors.surface,
-    borderRadius: 24,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: themeColors.border,
     paddingHorizontal: 16,
-    paddingVertical: 10,
-    minHeight: 48,
-    maxHeight: 120,
+    paddingTop: 8,
+    paddingBottom: 6,
+    minHeight: 44,
   },
   textInput: {
     fontSize: 15,
     color: themeColors.textPrimary,
     paddingTop: 0,
+    paddingBottom: 4,
+    maxHeight: 80,
+    textAlignVertical: 'top',
+  },
+  counterRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    alignItems: 'center',
+    marginTop: 2,
   },
   charCounter: {
     fontSize: 10,
     color: themeColors.textMuted,
-    textAlign: 'right',
-    marginTop: 2,
+    fontWeight: '600',
   },
   readMoreText: {
     color: themeColors.primary,
@@ -921,9 +956,9 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     fontSize: 15,
   },
   sendBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     backgroundColor: themeColors.primary,
     alignItems: 'center',
     justifyContent: 'center',
@@ -1009,7 +1044,7 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: Spacing.xl,
-    minHeight: 300,
+    paddingBottom: Platform.OS === 'ios' ? 40 : Spacing.xl,
   },
   editHeader: {
     flexDirection: 'row',
@@ -1022,16 +1057,27 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     fontWeight: '800',
     color: themeColors.textPrimary,
   },
-  editInput: {
+  editInputWrapper: {
     backgroundColor: themeColors.surface,
     borderRadius: 16,
     borderWidth: 1,
     borderColor: themeColors.border,
-    padding: Spacing.md,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 8,
+  },
+  editInput: {
     fontSize: 16,
     color: themeColors.textPrimary,
     minHeight: 120,
+    maxHeight: 180,
     textAlignVertical: 'top',
+    paddingTop: 0,
+  },
+  editCounterRow: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    marginTop: 6,
   },
   editActions: {
     marginTop: Spacing.xl,

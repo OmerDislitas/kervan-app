@@ -18,6 +18,7 @@ import { useRouter } from 'expo-router';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import AppScreenHeader from '@/components/AppScreenHeader';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { Typography, Spacing, BorderRadius, useThemeColors } from '@/constants/theme';
@@ -184,26 +185,22 @@ export default function EventsScreen() {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="chevron-back" size={22} color={themeColors.textPrimary} />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Etkinlikler</Text>
-        </View>
-        <View style={styles.headerActions}>
-          <NotificationBell />
-          {profile?.role === 'admin' && (
-            <TouchableOpacity
-              style={styles.adminButton}
-              onPress={() => router.push('/(app)/admin/organizations')}
-            >
-              <Ionicons name="add-circle-outline" size={20} color={themeColors.primary} />
-            </TouchableOpacity>
-          )}
-        </View>
-      </View>
+      <AppScreenHeader
+        title="Etkinlikler"
+        rightActions={
+          <>
+            <NotificationBell />
+            {profile?.role === 'admin' && (
+              <TouchableOpacity
+                style={styles.adminButton}
+                onPress={() => router.push('/(app)/admin/organizations')}
+              >
+                <Ionicons name="add-circle-outline" size={22} color={themeColors.primary} />
+              </TouchableOpacity>
+            )}
+          </>
+        }
+      />
 
       <FlatList
         data={organizations}
@@ -336,28 +333,6 @@ export default function EventsScreen() {
 const createStyles = (themeColors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: themeColors.background },
   loadingContainer: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: themeColors.border,
-  },
-  headerTitle: { fontSize: Typography.fontSize.xl, fontWeight: '800', color: themeColors.textPrimary },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  headerActions: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: themeColors.surface,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: themeColors.border,
-  },
   adminButton: {
     width: 40,
     height: 40,

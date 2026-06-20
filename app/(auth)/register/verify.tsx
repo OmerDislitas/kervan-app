@@ -103,7 +103,6 @@ export default function VerifyScreen() {
     }
 
     setLoading(true);
-    console.log(`[VerifyScreen] Verifying OTP: ${otp} for email: ${email}`);
     
     // AuthStore'a kayıt verilerini pasla
     useAuthStore.getState().setPendingProfileData(registerData);
@@ -117,7 +116,6 @@ export default function VerifyScreen() {
 
       // Eğer signup tipi başarısız olursa ve hata varsa, alternatif olarak 'email' tipini deneyelim
       if (error) {
-        console.log('[VerifyScreen] signup verification failed, trying fallback to email type...');
         const emailVerifyRes = await supabase.auth.verifyOtp({
           email,
           token: otp,
@@ -138,7 +136,6 @@ export default function VerifyScreen() {
       }
 
       if (data.user) {
-        console.log('[VerifyScreen] verifyOtp successful. User ID:', data.user.id);
         setLoading(false);
       }
     } catch (err: any) {

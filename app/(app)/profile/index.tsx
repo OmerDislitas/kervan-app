@@ -24,6 +24,7 @@ import { DAYS_OF_WEEK } from '@/constants/data';
 import { BADGES, UserBadgeStats } from '@/constants/badges';
 import BadgesModal from '@/components/BadgesModal';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import AppScreenHeader from '@/components/AppScreenHeader';
 
 type MyEvent = {
   event_id: string;
@@ -216,41 +217,40 @@ export default function ProfileScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[themeColors.primary]} />
         }
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <View style={styles.headerLeft}>
-            <Text style={styles.headerTitle}>Hesabım</Text>
-          </View>
-          <View style={styles.headerRight}>
-            {profile?.role === 'admin' && (
-              <View style={styles.adminBadge}>
-                <Ionicons name="shield-checkmark" size={12} color={themeColors.primary} />
-                <Text style={styles.adminBadgeText}>Admin</Text>
-              </View>
-            )}
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => setIsBadgesModalVisible(true)}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="medal-outline" size={18} color={themeColors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => router.push('/(app)/profile/settings')}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="settings-outline" size={18} color={themeColors.primary} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.editButton}
-              onPress={() => router.push('/(app)/profile/edit-profile')}
-              activeOpacity={0.8}
-            >
-              <Ionicons name="create-outline" size={18} color={themeColors.primary} />
-            </TouchableOpacity>
-          </View>
-        </View>
+        <AppScreenHeader
+          title="Hesabım"
+          rightActions={
+            <>
+              {profile?.role === 'admin' && (
+                <View style={styles.adminBadge}>
+                  <Ionicons name="shield-checkmark" size={12} color={themeColors.primary} />
+                  <Text style={styles.adminBadgeText}>Admin</Text>
+                </View>
+              )}
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => setIsBadgesModalVisible(true)}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="medal-outline" size={18} color={themeColors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => router.push('/(app)/profile/settings')}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="settings-outline" size={18} color={themeColors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.editButton}
+                onPress={() => router.push('/(app)/profile/edit-profile')}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="create-outline" size={18} color={themeColors.primary} />
+              </TouchableOpacity>
+            </>
+          }
+        />
 
         {/* Takip İstekleri Bildirimi */}
         {requestCount > 0 && (
@@ -523,10 +523,6 @@ const createChipStyles = (themeColors: any) => StyleSheet.create({
 const createStyles = (themeColors: any) => StyleSheet.create({
   container: { flex: 1, backgroundColor: themeColors.background },
   scrollContent: { padding: Spacing.lg, paddingBottom: Spacing.xl },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.lg },
-  headerLeft: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
-  headerTitle: { fontSize: Typography.fontSize['2xl'], fontWeight: '800', color: themeColors.textPrimary },
-  headerRight: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
   backButton: {
     width: 40,
     height: 40,
