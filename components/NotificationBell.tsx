@@ -27,6 +27,7 @@ export type NotificationItem = {
   read: boolean;
   type?: string;
   eventId?: string;
+  data?: Record<string, any>;
 };
 
 async function loadStoredNotifications(): Promise<NotificationItem[]> {

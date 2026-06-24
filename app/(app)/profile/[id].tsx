@@ -109,6 +109,15 @@ export default function UserProfileScreen() {
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = React.useState(false);
 
+  // Kendi profilini görüntülemeye çalışıyorsa ana profil sayfasına yönlendir.
+  // useEffect içinde yapılmazsa render sırasında navigation tetiklenip
+  // "Cannot update a component while rendering a different component" hatası alınır.
+  React.useEffect(() => {
+    if (id && currentProfile?.id && id === currentProfile.id) {
+      router.replace('/(app)/profile');
+    }
+  }, [id, currentProfile?.id]);
+
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
@@ -125,11 +134,6 @@ export default function UserProfileScreen() {
       setRefreshing(false);
     }
   }, [id, currentProfile?.id, queryClient]);
-
-  // If viewing own profile, redirect to main profile
-  if (id === currentProfile?.id) {
-    router.replace('/(app)/profile');
-  }
 
   const { data: userProfile, isLoading: isProfileLoading } = useQuery({
     queryKey: ['user-profile', id],
