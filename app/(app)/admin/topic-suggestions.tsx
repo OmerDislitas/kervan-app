@@ -263,7 +263,6 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     height: 36,
     borderRadius: 18,
     borderWidth: 1,
-    alignItems: 'center',
     justifyContent: 'center',
   },
   actionBtnText: {
