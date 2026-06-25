@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { supabase } from '@/lib/supabase';
@@ -11,6 +11,8 @@ import { useSettingsStore } from '@/stores/settingsStore';
 import { requestPermissions, registerPushToken } from '@/lib/notificationService';
 import * as Notifications from 'expo-notifications';
 import * as SplashScreen from 'expo-splash-screen';
+import NetInfo from '@react-native-community/netinfo';
+import { OfflineNotice } from '@/components/OfflineNotice';
 
 // Native splash ekranını JS bundle yüklenene kadar dondur
 SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -26,6 +28,13 @@ const queryClient = new QueryClient({
       staleTime: 1000 * 60 * 2,
     },
   },
+});
+
+// Configure React Query's onlineManager to respond to network status changes
+onlineManager.setEventListener((setOnline) => {
+  return NetInfo.addEventListener((state) => {
+    setOnline(!!state.isConnected);
+  });
 });
 
 function RootLayoutNav() {
@@ -70,6 +79,9 @@ function RootLayoutNav() {
     let subscription: ReturnType<typeof supabase.auth.onAuthStateChange>['data']['subscription'] | null = null;
 
     const initAuth = async () => {
+      // Load cached profile on startup to prevent routing glitches (e.g. login screen redirect)
+      await useAuthStore.getState().loadCachedProfile();
+
       try {
         // Geçersiz (expired/revoked) refresh token'ı burada yakala.
         // Yakalanmazsa Supabase bunu unhandled promise rejection olarak fırlatır.
@@ -77,14 +89,35 @@ function RootLayoutNav() {
         // (tuple olarak dönmek yerine), bu yüzden try-catch şart.
         const { error: sessionError } = await supabase.auth.getSession();
         if (sessionError) {
-          console.warn('[Auth] Geçersiz session temizlendi:', sessionError.message);
+          // Ignore network errors — user may be offline. Only clear for real auth errors.
+          const isNetworkErr = sessionError.message?.toLowerCase().includes('network') ||
+            sessionError.message?.toLowerCase().includes('fetch') ||
+            sessionError.message?.toLowerCase().includes('failed');
+          if (isNetworkErr) {
+            console.warn('[Auth] Ağ hatası, session korunuyor:', sessionError.message);
+            // Continue to set up the auth listener even when offline
+          } else {
+            console.warn('[Auth] Geçersiz session temizlendi:', sessionError.message);
+            await clearStaleSession();
+            return;
+          }
+        }
+      } catch (err: any) {
+        // Distinguish network errors from real auth errors
+        const msg: string = err?.message || '';
+        const isNetworkErr = msg.toLowerCase().includes('network request failed') ||
+          msg.toLowerCase().includes('network') ||
+          msg.toLowerCase().includes('fetch') ||
+          msg.toLowerCase().includes('failed to fetch');
+        if (isNetworkErr) {
+          // User is offline — do NOT clear session, cached profile handles routing
+          console.warn('[Auth] Ağ bağlantısı yok, session korunuyor:', msg);
+          // Fall through to set up auth listener; it will sync when back online
+        } else {
+          console.warn('[Auth] getSession exception, session temizleniyor:', msg);
           await clearStaleSession();
           return;
         }
-      } catch (err: any) {
-        console.warn('[Auth] getSession exception, session temizleniyor:', err?.message || err);
-        await clearStaleSession();
-        return;
       }
 
       // Auth state listener — tek kaynak (INITIAL_SESSION dahil)
@@ -220,6 +253,7 @@ export default function RootLayout() {
         <QueryClientProvider client={queryClient}>
           <ThemeStatusBar />
           <RootLayoutNav />
+          <OfflineNotice />
         </QueryClientProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>

@@ -19,12 +19,12 @@ import { supabase } from '@/lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '@/stores/authStore';
 import {
-  EXPLORE_QUOTE_POOL,
   NATURE_BACKGROUNDS,
   QUOTE_BACKGROUNDS,
   getDayOfYear,
   getTodaySpecialDay,
 } from '@/constants/storyData';
+import { fetchExploreQuotes, pickDailyQuote } from '@/services/quotesService';
 import { getDailyQuiz } from '@/constants/quizData';
 import ExploreHeader from './_components/ExploreHeader';
 import StoryModal from './_components/StoryModal';
@@ -36,7 +36,6 @@ const _DAY_OF_YEAR = getDayOfYear();
 const _SPECIAL_DAY = getTodaySpecialDay();
 const _DAILY_QUIZ = getDailyQuiz();
 const _NATURE_BG = NATURE_BACKGROUNDS[_DAY_OF_YEAR % NATURE_BACKGROUNDS.length];
-const _TODAY_QUOTE = EXPLORE_QUOTE_POOL[_DAY_OF_YEAR % EXPLORE_QUOTE_POOL.length];
 const _QUOTE_BG = QUOTE_BACKGROUNDS[_DAY_OF_YEAR % QUOTE_BACKGROUNDS.length];
 
 // ─── Supabase Hap Bilgileri ──────────────────────────────────────────────────
@@ -100,6 +99,18 @@ export default function ExploreScreen() {
     enabled: dataEnabled,
   });
   const isFactsLoading = !dataEnabled || isFactsQueryLoading;
+
+  // ─── Özlü Sözler (Supabase öncelikli, offline fallback) ────────────────────
+  const { data: exploreQuotes } = useQuery({
+    queryKey: ['explore-quotes'],
+    queryFn: fetchExploreQuotes,
+    staleTime: 1000 * 60 * 60 * 24, // 24 saat cache
+    retry: 1,
+  });
+  const todayQuote = React.useMemo(
+    () => pickDailyQuote(exploreQuotes ?? []),
+    [exploreQuotes]
+  );
 
   // Günlük hap bilgiler (supabase öncelikli, yoksa local fallback)
   const dailyFacts = React.useMemo<FactItem[]>(() => {
@@ -229,7 +240,7 @@ export default function ExploreScreen() {
       },
       {
         id: 'quote', title: 'Günün Sözü', icon: 'book-outline', color: '#A78BFA',
-        slides: [{ id: 'q1', type: 'daily_quote', quoteText: _TODAY_QUOTE.text, quoteAuthor: _TODAY_QUOTE.author, image: _QUOTE_BG }],
+        slides: [{ id: 'q1', type: 'daily_quote', quoteText: todayQuote?.text ?? '', quoteAuthor: todayQuote?.author ?? '', image: _QUOTE_BG }],
       },
       {
         id: 'quiz', title: 'Bilgelik Testi', icon: 'help-circle-outline', color: '#10B981',
@@ -241,7 +252,7 @@ export default function ExploreScreen() {
         }],
       },
     ];
-  }, [dailyFacts]);
+  }, [dailyFacts, todayQuote]);
 
   const closeStory = useCallback(() => {
     setActiveStoryGroup(null);

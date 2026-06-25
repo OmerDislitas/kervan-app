@@ -87,6 +87,19 @@ export type Database = {
         Insert: Omit<Database['public']['Tables']['organizations']['Row'], 'id' | 'created_at'>;
         Update: Partial<Database['public']['Tables']['organizations']['Insert']>;
       };
+      quotes: {
+        Row: {
+          id: number;
+          text: string;
+          author: string;
+          category: 'azim' | 'motivasyon' | 'inanc' | 'ekstra' | 'hikmet';
+          pool: 'explore' | 'home';
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: Omit<Database['public']['Tables']['quotes']['Row'], 'id' | 'created_at'>;
+        Update: Partial<Database['public']['Tables']['quotes']['Insert']>;
+      };
     };
   };
 };

@@ -34,6 +34,7 @@ type AuthState = {
   setLoading: (loading: boolean) => void;
   setPendingProfileData: (data: any) => void;
   fetchProfile: (userId: string) => Promise<void>;
+  loadCachedProfile: () => Promise<void>;
   signOut: () => Promise<void>;
   reset: () => void;
 };
@@ -137,11 +138,31 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         profile: prof,
         isAdmin: prof?.role === 'admin',
       });
+      try {
+        await AsyncStorage.setItem('@kervan_cached_profile', JSON.stringify(prof));
+      } catch (cacheErr) {
+        console.warn('[authStore] Error caching profile:', cacheErr);
+      }
     } catch (err) {
       console.error('[authStore] fetchProfile error:', err);
       // Hata olsa bile isLoading'i kaldır; aksi hâlde uygulama
       // splash ekranında sonsuza dek takılı kalır.
       set({ isLoading: false });
+    }
+  },
+
+  loadCachedProfile: async () => {
+    try {
+      const cached = await AsyncStorage.getItem('@kervan_cached_profile');
+      if (cached) {
+        const prof = JSON.parse(cached) as UserProfile;
+        set({
+          profile: prof,
+          isAdmin: prof?.role === 'admin',
+        });
+      }
+    } catch (err) {
+      console.warn('[authStore] loadCachedProfile error:', err);
     }
   },
 
@@ -161,7 +182,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         '@kervan_last_quote_read',
         '@kervan_last_follow',
         '@kervan_last_explore_view',
-        '@kervan_last_event_view'
+        '@kervan_last_event_view',
+        '@kervan_cached_profile'
       ];
       await AsyncStorage.multiRemove(keysToClear);
     } catch (err) {

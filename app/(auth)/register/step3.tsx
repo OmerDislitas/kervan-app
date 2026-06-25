@@ -17,6 +17,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { supabase } from '@/lib/supabase';
 import { Colors, Typography, Spacing, BorderRadius, useThemeColors } from '@/constants/theme';
 import { registerData } from './step1';
+import NetInfo from '@react-native-community/netinfo';
 
 export default function RegisterStep3() {
   const themeColors = useThemeColors();
@@ -30,6 +31,7 @@ export default function RegisterStep3() {
   const [loading, setLoading] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [showOfflineModal, setShowOfflineModal] = useState(false);
 
   const [errors, setErrors] = useState<{
     email?: string;
@@ -60,6 +62,13 @@ export default function RegisterStep3() {
 
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
+      return;
+    }
+
+    // Check internet connection before attempting sign up
+    const netState = await NetInfo.fetch();
+    if (!netState.isConnected) {
+      setShowOfflineModal(true);
       return;
     }
 
@@ -337,6 +346,28 @@ export default function RegisterStep3() {
           </View>
         </View>
       </Modal>
+
+      {/* Offline Warning Modal */}
+      <Modal visible={showOfflineModal} animationType="fade" transparent>
+        <View style={styles.alertOverlay}>
+          <View style={styles.alertCard}>
+            <View style={styles.alertIconContainer}>
+              <Ionicons name="wifi-outline" size={48} color={themeColors.error} />
+            </View>
+            <Text style={styles.alertTitle}>Bağlantı Hatası</Text>
+            <Text style={styles.alertMessage}>
+              İnternet bağlantınız bulunmamaktadır. Lütfen internet bağlantınızı kontrol edip tekrar deneyiniz.
+            </Text>
+            <TouchableOpacity 
+              style={styles.alertButton} 
+              onPress={() => setShowOfflineModal(false)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.alertButtonText}>Tamam</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -471,5 +502,68 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     color: themeColors.background,
     fontSize: Typography.fontSize.md,
     fontWeight: '800',
+  },
+  alertOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.75)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.lg,
+  },
+  alertCard: {
+    backgroundColor: themeColors.surface,
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.lg,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 320,
+    borderWidth: 1,
+    borderColor: themeColors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 10 },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 10,
+  },
+  alertIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: themeColors.error + '15',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
+  alertTitle: {
+    fontSize: Typography.fontSize.xl,
+    fontWeight: '800',
+    color: themeColors.textPrimary,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+  },
+  alertMessage: {
+    fontSize: Typography.fontSize.md,
+    color: themeColors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: Spacing.lg,
+  },
+  alertButton: {
+    backgroundColor: themeColors.primary,
+    borderRadius: BorderRadius.md,
+    height: 48,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: themeColors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  alertButtonText: {
+    color: themeColors.background,
+    fontSize: Typography.fontSize.md,
+    fontWeight: '700',
   },
 });
