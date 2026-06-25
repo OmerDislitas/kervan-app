@@ -10,6 +10,7 @@ import { useSettingsStore } from '@/stores/settingsStore';
 const IS_EXPO_GO = Constants.appOwnership === 'expo';
 
 const NOTIF_STORAGE_KEY = '@kervan_notifications';
+const NOTIF_SCHEDULED_TODAY_KEY = '@kervan_notif_scheduled_date';
 
 /** Bildirimi doğrudan panel geçmişine kaydet */
 async function saveToPanelHistory(id: string, title: string, body: string, type: string, eventId?: string) {
@@ -110,15 +111,19 @@ export async function registerPushToken(userId: string): Promise<void> {
 export async function cancelAllNotifications(): Promise<void> {
   try {
     await Notifications.cancelAllScheduledNotificationsAsync();
+    // Bugünün zamanlama kaydını da sil ki bir sonraki açılışta yeniden kurulsun
+    await AsyncStorage.removeItem(NOTIF_SCHEDULED_TODAY_KEY);
   } catch (err) {
     console.error('[Notifications] cancelAllNotifications hatası:', err);
   }
 }
 
 /**
- * Etkinlik için 24 saat öncesi zamanlanmış bildirim oluştur.
- * event_date'i olan (tek seferlik) etkinlikler için çalışır.
- * Identifier olarak "event-reminder-{eventId}" kullanılır.
+ * Etkinlik için bildirimler oluştur:
+ * 1) Kayıt başarılı bildirimi (hemen gösterilir)
+ * 2) 24 saat öncesi hatırlatıcı (yalnızca etkinlik 24+ saat sonra ise)
+ *
+ * Identifier: "event-reminder-{eventId}"
  */
 export async function scheduleEventReminder(event: {
   id: string;
@@ -131,8 +136,10 @@ export async function scheduleEventReminder(event: {
 
   try {
     const eventDate = new Date(event.event_date);
-    const reminderDate = new Date(eventDate.getTime() - 24 * 60 * 60 * 1000);
     const now = new Date();
+
+    // Geçmiş etkinlik kontrolü — geçmişteyse sadece kayıt bildirimi göster
+    const eventInFuture = eventDate.getTime() > now.getTime();
 
     // 1) Başarılı Kayıt Bildirimi (Hemen Göster)
     const successNotifId = `event-registered-${event.id}`;
@@ -151,19 +158,33 @@ export async function scheduleEventReminder(event: {
     });
     await saveToPanelHistory(successNotifId, successTitle, successBody, 'event-registered', event.id);
 
-    // 2) 24 Saat Öncesi Hatırlatıcı (Yalnızca gelecek zamanlı ise)
-    if (reminderDate > now) {
-      const notifId = `event-reminder-${event.id}`;
-      const title = '🔔 Etkinlik Hatırlatıcı';
-      const body = `"${event.title}" etkinliği 24 saat içinde başlıyor!${event.location ? `\n📍 ${event.location}` : ''}`;
+    // 2) 24 Saat Öncesi Hatırlatıcı
+    // Önce varsa eski hatırlatıcıyı iptal et (tekrar kayıt durumunda çift bildirim önlenir)
+    const reminderNotifId = `event-reminder-${event.id}`;
+    try {
+      await Notifications.cancelScheduledNotificationAsync(reminderNotifId);
+    } catch {
+      // Yoksa hata yok
+    }
 
-      await Notifications.scheduleNotificationAsync({
-        identifier: notifId,
-        content: { title, body, data: { eventId: event.id, type: 'event-reminder' }, sound: true },
-        trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: reminderDate },
-      });
+    // Yalnızca etkinlik gelecekte VE 24+ saat sonra ise hatırlatıcı kur
+    if (eventInFuture) {
+      const reminderDate = new Date(eventDate.getTime() - 24 * 60 * 60 * 1000);
+      
+      // reminderDate gelecekte mi? (etkinlik en az 24 saat sonra mı?)
+      if (reminderDate.getTime() > now.getTime() + 60 * 1000) {
+        // +60s güvenlik marjı — çok yakın zamanlı trigger'lar bazı cihazlarda anında tetiklenir
+        const title = '🔔 Etkinlik Hatırlatıcı';
+        const body = `"${event.title}" etkinliği 24 saat içinde başlıyor!${event.location ? `\n📍 ${event.location}` : ''}`;
 
-      await saveToPanelHistory(notifId, title, body, 'event-reminder', event.id);
+        await Notifications.scheduleNotificationAsync({
+          identifier: reminderNotifId,
+          content: { title, body, data: { eventId: event.id, type: 'event-reminder' }, sound: true },
+          trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: reminderDate },
+        });
+        // NOT: Panel geçmişine kaydetmiyoruz — bildirim tetiklendiğinde
+        // notification listener tarafından kaydedilmeli
+      }
     }
   } catch (err) {
     console.error('[Notifications] scheduleEventReminder hatası:', err);
@@ -218,7 +239,6 @@ export async function scheduleWeeklyFridayMessage(): Promise<void> {
   try {
     const notifId = 'weekly-friday-message';
     
-    // Zaten varsa tekrar kurmaya gerek yok (veya üzerine yazar)
     await Notifications.scheduleNotificationAsync({
       identifier: notifId,
       content: {
@@ -281,16 +301,7 @@ const DAILY_WISDOM = [
 export async function scheduleDailyWisdom(): Promise<void> {
   if (!useSettingsStore.getState().notificationsEnabled) return;
   try {
-    // Mevcut tüm günlük söz bildirimlerini iptal et
-    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-    for (const notif of scheduled) {
-      if (notif.identifier.startsWith('daily-wisdom-')) {
-        await Notifications.cancelScheduledNotificationAsync(notif.identifier);
-      }
-    }
-
     const now = new Date();
-    // Epoch günü: 1970-01-01'den bu yana kaç tam gün geçti
     const MS_PER_DAY = 24 * 60 * 60 * 1000;
     const todayEpochDay = Math.floor(now.getTime() / MS_PER_DAY);
 
@@ -300,12 +311,10 @@ export async function scheduleDailyWisdom(): Promise<void> {
       const targetEpochDay = todayEpochDay + i;
       const wisdom = DAILY_WISDOM[targetEpochDay % DAILY_WISDOM.length];
 
-      // Bildirim zamanı: hedef günün 10:00'ı (yerel saat)
       const triggerDate = new Date(now);
       triggerDate.setDate(now.getDate() + i);
       triggerDate.setHours(10, 0, 0, 0);
 
-      // Geçmiş zamanlı ise (bugün 10:00 geçtiyse) bu günü atla
       if (triggerDate <= now) continue;
 
       const notifId = `daily-wisdom-${targetEpochDay}`;
@@ -339,8 +348,6 @@ export async function scheduleDailyCompass(): Promise<void> {
   try {
     const notifId = 'daily-compass';
     
-    await Notifications.cancelScheduledNotificationAsync(notifId);
-    
     await Notifications.scheduleNotificationAsync({
       identifier: notifId,
       content: {
@@ -370,9 +377,6 @@ export async function scheduleDailyFactsNotification(): Promise<void> {
   try {
     const notifId = 'daily-facts';
 
-    // Var olan bildirimi iptal et (her oturum açılışında yeniden kur)
-    await Notifications.cancelScheduledNotificationAsync(notifId);
-
     await Notifications.scheduleNotificationAsync({
       identifier: notifId,
       content: {
@@ -394,20 +398,65 @@ export async function scheduleDailyFactsNotification(): Promise<void> {
 }
 
 /**
+ * Tüm yinelenen (recurring) bildirimleri TEK BİR NOKTADAN zamanlar.
+ *
+ * Çift bildirim sorununu önlemek için:
+ * 1. Önce mevcut TÜM zamanlanmış bildirimleri iptal eder (etkinlik hatırlatıcıları hariç)
+ * 2. Sonra her bildirimi tek seferde yeniden kurar
+ * 3. Günde yalnızca bir kez çalışır (AsyncStorage ile kontrol)
+ *
+ * @param force - true ise günlük kontrolü atlar (ayarlardan açma/kapama durumu)
+ */
+export async function scheduleAllRecurringNotifications(force = false): Promise<void> {
+  if (!useSettingsStore.getState().notificationsEnabled) return;
+
+  try {
+    // Günde bir kez çalışması için kontrol (force=true ise atla)
+    if (!force) {
+      const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+      const lastScheduled = await AsyncStorage.getItem(NOTIF_SCHEDULED_TODAY_KEY);
+      if (lastScheduled === today) {
+        return; // Bugün zaten zamanlandı
+      }
+    }
+
+    // 1) Mevcut yinelenen bildirimleri iptal et (etkinlik hatırlatıcıları hariç)
+    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+    for (const notif of scheduled) {
+      const id = notif.identifier;
+      if (id.startsWith('event-reminder-') || id.startsWith('event-registered-') || id.startsWith('new-event-')) {
+        continue;
+      }
+      await Notifications.cancelScheduledNotificationAsync(id);
+    }
+
+    // 2) Tüm yinelenen bildirimleri tek seferde kur
+    await scheduleWeeklyFridayMessage();
+    await scheduleDailyWisdom();
+    await scheduleDailyCompass();
+    await scheduleDailyFactsNotification();
+
+    // 3) Bugünün tarihini kaydet
+    const today = new Date().toISOString().slice(0, 10);
+    await AsyncStorage.setItem(NOTIF_SCHEDULED_TODAY_KEY, today);
+
+  } catch (err) {
+    console.error('[Notifications] scheduleAllRecurringNotifications hatası:', err);
+  }
+}
+
+/**
  * Bir kullanıcıya anlık bildirim (push notification) gönderir.
  *
- * GÜVENLİK: Push token'lar artık istemciye açılmıyor (PII/token hasadı
- * koruması — bkz. supabase/security_fixes.sql K-2/Y-2). Gönderim,
- * service_role ile token'ı sunucuda okuyan ve başlık/gövdeyi SABİT
- * şablonlardan üreten 'send-notification' Edge Function'ı üzerinden yapılır.
+ * Sunucu tarafında 'send-notification' Edge Function'ı çağrılır.
+ * Edge Function hedef kullanıcının push token'ını okuyup bildirimi gönderir.
  *
- * Not: `title`/`body` parametreleri geriye dönük uyumluluk için korunuyor
- * ancak ARTIK KULLANILMIYOR — içerik sunucudaki `data.type` şablonundan gelir.
+ * title ve body parametreleri Edge Function'a iletilir.
  */
 export async function sendPushNotification(
   targetUserId: string,
-  _title: string,
-  _body: string,
+  title: string,
+  body: string,
   data: { type?: string; [key: string]: any } = {}
 ): Promise<void> {
   try {
@@ -419,9 +468,10 @@ export async function sendPushNotification(
 
     const { type: _t, ...extra } = data;
     await supabase.functions.invoke('send-notification', {
-      body: { targetUserId, type, data: extra },
+      body: { targetUserId, type, title, body, data: extra },
     });
   } catch {
+    // Edge Function çağrısı başarısız olsa da sessizce geç
   }
 }
 

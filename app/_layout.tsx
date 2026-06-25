@@ -70,11 +70,19 @@ function RootLayoutNav() {
     let subscription: ReturnType<typeof supabase.auth.onAuthStateChange>['data']['subscription'] | null = null;
 
     const initAuth = async () => {
-      // Geçersiz (expired/revoked) refresh token'ı burada yakala.
-      // Yakalanmazsa Supabase bunu unhandled promise rejection olarak fırlatır.
-      const { error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) {
-        console.warn('[Auth] Geçersiz session temizlendi:', sessionError.message);
+      try {
+        // Geçersiz (expired/revoked) refresh token'ı burada yakala.
+        // Yakalanmazsa Supabase bunu unhandled promise rejection olarak fırlatır.
+        // NOT: Supabase auth-js bazı durumlarda AuthApiError'ı throw eder
+        // (tuple olarak dönmek yerine), bu yüzden try-catch şart.
+        const { error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) {
+          console.warn('[Auth] Geçersiz session temizlendi:', sessionError.message);
+          await clearStaleSession();
+          return;
+        }
+      } catch (err: any) {
+        console.warn('[Auth] getSession exception, session temizleniyor:', err?.message || err);
         await clearStaleSession();
         return;
       }
@@ -82,57 +90,66 @@ function RootLayoutNav() {
       // Auth state listener — tek kaynak (INITIAL_SESSION dahil)
       const { data } = supabase.auth.onAuthStateChange(
         async (event, session) => {
-  
-          if (event === 'SIGNED_OUT') {
-            queryClient.clear();
-            setSession(null);
-            setLoading(false);
-            return;
-          }
+          try {
+            if (event === 'SIGNED_OUT') {
+              queryClient.clear();
+              setSession(null);
+              setLoading(false);
+              return;
+            }
 
-          if (event === 'TOKEN_REFRESHED' && !session) {
-            await clearStaleSession();
-            return;
-          }
+            if (event === 'TOKEN_REFRESHED' && !session) {
+              await clearStaleSession();
+              return;
+            }
 
-          if (!session) {
-            queryClient.clear();
-            setSession(null);
-            setLoading(false);
-            return;
-          }
+            if (!session) {
+              queryClient.clear();
+              setSession(null);
+              setLoading(false);
+              return;
+            }
 
-          if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
-            try {
-              setSession(session);
-              await fetchProfile(session.user.id);
+            if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+              try {
+                setSession(session);
+                await fetchProfile(session.user.id);
 
-              if (event === 'SIGNED_IN') {
-                // Bildirim izni ve token kaydı sadece giriş sırasında
-                const enabled = useSettingsStore.getState().notificationsEnabled;
-                if (enabled) {
-                  const granted = await requestPermissions();
-                  if (granted) {
-                    await registerPushToken(session.user.id);
+                if (event === 'SIGNED_IN') {
+                  // Bildirim izni ve token kaydı sadece giriş sırasında
+                  const enabled = useSettingsStore.getState().notificationsEnabled;
+                  if (enabled) {
+                    const granted = await requestPermissions();
+                    if (granted) {
+                      await registerPushToken(session.user.id);
+                    }
                   }
                 }
+              } catch (err) {
+                console.error('[Auth] Session init error:', err);
+              } finally {
+                setLoading(false);
               }
-            } catch (err) {
-              console.error('[Auth] Session init error:', err);
-            } finally {
-              setLoading(false);
+              return;
             }
-            return;
-          }
 
-          setSession(session);
-          setLoading(false);
+            setSession(session);
+            setLoading(false);
+          } catch (err: any) {
+            console.error('[Auth] onAuthStateChange exception:', err?.message || err);
+            // Auth state callback'inde beklenmeyen hata —
+            // session'ı temizleyip login sayfasına düş
+            await clearStaleSession();
+          }
         }
       );
       subscription = data.subscription;
     };
 
-    initAuth();
+    initAuth().catch((err) => {
+      console.error('[Auth] initAuth uncaught error:', err);
+      clearStaleSession();
+    });
 
     return () => subscription?.unsubscribe();
   }, []);

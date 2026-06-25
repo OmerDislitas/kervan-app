@@ -125,7 +125,7 @@ export default function AdminTopicSuggestionsScreen() {
 
         <Text style={styles.title}>{item.title}</Text>
         {item.description && <Text style={styles.desc}>{item.description}</Text>}
-        
+
         <View style={styles.metaRow}>
           <Ionicons name="person-outline" size={14} color={themeColors.textSecondary} />
           <Text style={styles.metaText}>
@@ -135,7 +135,7 @@ export default function AdminTopicSuggestionsScreen() {
 
         <View style={styles.actions}>
           {item.status !== 'accepted' && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.actionBtn, { borderColor: themeColors.success, backgroundColor: themeColors.success + '11' }]}
               onPress={() => acceptAsQuestionMutation.mutate(item)}
               disabled={acceptAsQuestionMutation.isPending}
@@ -145,7 +145,7 @@ export default function AdminTopicSuggestionsScreen() {
             </TouchableOpacity>
           )}
           {item.status !== 'rejected' && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.actionBtn, { borderColor: themeColors.error, backgroundColor: themeColors.error + '11' }]}
               onPress={() => updateStatusMutation.mutate({ id: item.id, status: 'rejected' })}
             >
@@ -153,7 +153,7 @@ export default function AdminTopicSuggestionsScreen() {
             </TouchableOpacity>
           )}
           {item.status === 'pending' && (
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.actionBtn, { borderColor: themeColors.textSecondary, backgroundColor: themeColors.surfaceLight }]}
               onPress={() => updateStatusMutation.mutate({ id: item.id, status: 'reviewed' })}
             >

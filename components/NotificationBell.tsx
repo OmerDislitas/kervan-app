@@ -217,11 +217,14 @@ export default function NotificationBell() {
     return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' });
   };
 
-  const getIcon = (item: NotificationItem): 'add-circle' | 'alarm' | 'calendar' | 'chatbubble' | 'heart' => {
+  const getIcon = (item: NotificationItem): 'add-circle' | 'alarm' | 'calendar' | 'chatbubble' | 'heart' | 'people' | 'person-add' | 'checkmark-circle' => {
     if (item.type === 'comment-reply') return 'chatbubble';
     if (item.type === 'comment-like') return 'heart';
     if (item.type === 'new-event') return 'add-circle';
     if (item.type === 'event-reminder') return 'alarm';
+    if (item.type === 'new-follower') return 'people';
+    if (item.type === 'follow-request') return 'person-add';
+    if (item.type === 'follow-accepted') return 'checkmark-circle';
     if (item.title?.includes('Yeni')) return 'add-circle';
     return 'calendar';
   };
@@ -303,6 +306,15 @@ export default function NotificationBell() {
                     const questionId = (item as any).data?.questionId;
                     if (socialTypes.includes(item.type || '') && questionId) {
                       router.push(`/(app)/soz-sende/${questionId}` as any);
+                    } else if (item.type === 'new-follower' || item.type === 'follow-accepted') {
+                      const followerId = (item as any).data?.followerId || (item as any).data?.followingId;
+                      if (followerId) {
+                        router.push(`/(app)/profile/${followerId}` as any);
+                      } else {
+                        router.push('/(app)/profile');
+                      }
+                    } else if (item.type === 'follow-request') {
+                      router.push('/(app)/profile/requests');
                     } else if (item.eventId) {
                       router.push(`/(app)/events/${item.eventId}`);
                     } else {

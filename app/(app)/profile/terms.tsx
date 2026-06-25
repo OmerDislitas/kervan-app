@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -28,7 +29,7 @@ Bu Koşullar; Kervan'ı geliştiren ekip ("Kervan Ekibi") ile uygulamayı kullan
 
 Hesabınızın güvenliğini sağlamak, şifrenizi gizli tutmak ve yetkisiz erişimleri engellemek kullanıcının sorumluluğundadır. Hesabınızda gerçekleşen tüm işlemlerden siz sorumlu tutulursunuz.
 
-18 yaşın altındaki kullanıcıların uygulamayı kullanması, veli veya yasal temsilcinin bilgisi ve onayı dahilinde olmalıdır.`,
+18 yaşın altındaki kullanıcıların uygulamayı kullanması, veli veya yasal temsilcinin bilgi og onay dahilinde olmalıdır.`,
   },
   {
     icon: 'shield-outline' as const,
@@ -81,7 +82,7 @@ Kullanıcıların birbiriyle gerçekleştirdiği etkileşimlerden doğan anlaşm
     title: '8. İletişim',
     content: `Bu Koşullar hakkında sorularınız veya bildirimleriniz için bizimle iletişime geçebilirsiniz:
 
-📧 destek@kervanapp.com
+📧 kervanapp@gmail.com
 
 Talepleriniz en geç 15 iş günü içinde yanıtlanacaktır.`,
   },
@@ -91,6 +92,14 @@ export default function TermsScreen() {
   const themeColors = useThemeColors();
   const styles = React.useMemo(() => createStyles(themeColors), [themeColors]);
   const router = useRouter();
+
+  const handleEmailPress = async () => {
+    try {
+      await Linking.openURL('mailto:kervanapp@gmail.com');
+    } catch (error) {
+      console.log('Error opening mail client', error);
+    }
+  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -118,17 +127,41 @@ export default function TermsScreen() {
         </View>
 
         {/* Sections */}
-        {sections.map((section, index) => (
-          <View key={index} style={styles.sectionCard}>
-            <View style={styles.sectionHeader}>
-              <View style={styles.sectionIconWrap}>
-                <Ionicons name={section.icon} size={18} color={themeColors.primary} />
+        {sections.map((section, index) => {
+          const isEmailSection = section.icon === 'mail-outline';
+          return (
+            <View key={index} style={styles.sectionCard}>
+              <View style={styles.sectionHeader}>
+                <View style={styles.sectionIconWrap}>
+                  <Ionicons name={section.icon} size={18} color={themeColors.primary} />
+                </View>
+                <Text style={styles.sectionTitle}>{section.title}</Text>
               </View>
-              <Text style={styles.sectionTitle}>{section.title}</Text>
+              {isEmailSection ? (
+                <View>
+                  <Text style={styles.sectionBody}>
+                    Bu Koşullar hakkında sorularınız veya bildirimleriniz için bizimle iletişime geçebilirsiniz:
+                  </Text>
+                  
+                  <TouchableOpacity 
+                    onPress={handleEmailPress}
+                    style={styles.emailButton}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="mail-open-outline" size={16} color={themeColors.primary} />
+                    <Text style={styles.emailText}>kervanapp@gmail.com</Text>
+                  </TouchableOpacity>
+
+                  <Text style={styles.sectionBody}>
+                    Talepleriniz en geç 15 iş günü içinde yanıtlanacaktır.
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.sectionBody}>{section.content}</Text>
+              )}
             </View>
-            <Text style={styles.sectionBody}>{section.content}</Text>
-          </View>
-        ))}
+          );
+        })}
 
         {/* Footer Note */}
         <View style={styles.footerNote}>
@@ -257,5 +290,24 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     color: themeColors.textMuted,
     flex: 1,
     lineHeight: 18,
+  },
+  emailButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: themeColors.primary + '12',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: BorderRadius.md,
+    gap: 8,
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: themeColors.primary + '25',
+    alignSelf: 'flex-start',
+  },
+  emailText: {
+    fontSize: Typography.fontSize.sm,
+    color: themeColors.primary,
+    fontWeight: '700',
+    textDecorationLine: 'underline',
   },
 });

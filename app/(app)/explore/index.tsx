@@ -104,14 +104,21 @@ export default function ExploreScreen() {
   // Günlük hap bilgiler (supabase öncelikli, yoksa local fallback)
   const dailyFacts = React.useMemo<FactItem[]>(() => {
     if (supabaseDailyFacts && supabaseDailyFacts.length > 0) return supabaseDailyFacts;
+
+    // Sıralı döngü (round-robin): havuzdan sırayla seçim
+    const perDay = 8; // Local havuzda 8 bilgi var, tamamını göster
     const today = new Date();
-    const dayIndex = today.getDate() + today.getMonth() * 31 + today.getFullYear();
-    const shuffled = [...QUICK_FACTS] as FactItem[];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const seed = (dayIndex * (i + 1)) % (i + 1);
-      const temp = shuffled[i]; shuffled[i] = shuffled[seed]; shuffled[seed] = temp;
+    const refDate = new Date(2025, 0, 1); // 1 Ocak 2025
+    const dayNumber = Math.floor((today.getTime() - refDate.getTime()) / (1000 * 60 * 60 * 24));
+    const pool = QUICK_FACTS as FactItem[];
+    const poolSize = pool.length;
+    const startOffset = (dayNumber * perDay) % poolSize;
+
+    const result: FactItem[] = [];
+    for (let i = 0; i < Math.min(perDay, poolSize); i++) {
+      result.push(pool[(startOffset + i) % poolSize]);
     }
-    return shuffled;
+    return result;
   }, [supabaseDailyFacts]);
 
   // ─── Kategoriler (dinamik) ───────────────────────────────────────────────

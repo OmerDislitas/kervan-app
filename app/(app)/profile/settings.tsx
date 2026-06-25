@@ -17,10 +17,7 @@ import { useSettingsStore } from '@/stores/settingsStore';
 import { 
   requestPermissions, 
   cancelAllNotifications, 
-  scheduleWeeklyFridayMessage, 
-  scheduleDailyWisdom, 
-  scheduleDailyCompass, 
-  scheduleDailyFactsNotification,
+  scheduleAllRecurringNotifications,
   registerPushToken
 } from '@/lib/notificationService';
 import { useAuthStore } from '@/stores/authStore';
@@ -62,10 +59,7 @@ export default function SettingsScreen() {
                   await registerPushToken(profile.id);
                 }
                 // Bildirimleri zamanla
-                await scheduleWeeklyFridayMessage();
-                await scheduleDailyWisdom();
-                await scheduleDailyCompass();
-                await scheduleDailyFactsNotification();
+                await scheduleAllRecurringNotifications(true);
               } else {
                 Alert.alert(
                   'İzin Gerekli',

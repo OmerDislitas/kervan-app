@@ -58,7 +58,9 @@ export default function LoginScreen() {
       setLoading(false);
     } catch (err: any) {
       setLoading(false);
-      Alert.alert('Hata', 'Bir sorun oluştu. Lütfen tekrar deneyin.');
+      console.error('[Login] signIn exception:', err);
+      const message = err?.message || 'Bir sorun oluştu. Lütfen tekrar deneyin.';
+      Alert.alert('Hata', message);
     }
   };
 

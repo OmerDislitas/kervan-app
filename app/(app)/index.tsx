@@ -9,10 +9,7 @@ import { useThemeColors } from '@/constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
 import {
-  scheduleWeeklyFridayMessage,
-  scheduleDailyWisdom,
-  scheduleDailyCompass,
-  scheduleDailyFactsNotification,
+  scheduleAllRecurringNotifications,
   requestPermissions,
   cancelAllNotifications,
   registerPushToken,
@@ -117,10 +114,7 @@ export default function HomeScreen() {
                 if (granted) {
                   useSettingsStore.getState().setNotificationsEnabled(true);
                   await registerPushToken(profile!.id);
-                  await scheduleWeeklyFridayMessage();
-                  await scheduleDailyWisdom();
-                  await scheduleDailyCompass();
-                  await scheduleDailyFactsNotification();
+                  await scheduleAllRecurringNotifications(true);
                 } else {
                   useSettingsStore.getState().setNotificationsEnabled(false);
                   Alert.alert(
@@ -136,10 +130,7 @@ export default function HomeScreen() {
       } else {
         const enabled = useSettingsStore.getState().notificationsEnabled;
         if (enabled) {
-          scheduleWeeklyFridayMessage();
-          scheduleDailyWisdom();
-          scheduleDailyCompass();
-          scheduleDailyFactsNotification();
+          scheduleAllRecurringNotifications();
         }
       }
     } catch {
