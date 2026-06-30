@@ -311,7 +311,7 @@ export default function RegisterStep3() {
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.modalScroll}>
               <Text style={styles.termsBodyTitle}>1. Giriş ve Kabul</Text>
               <Text style={styles.termsBodyText}>
-                Kervan uygulamasına kayıt olarak ve uygulamayı kullanarak, bu koşulların tamamını kabul etmiş sayılırsınız. Eğer koşulları kabul etmiyorsanız uygulamayı kullanmayınız.
+                FikirForum uygulamasına kayıt olarak ve uygulamayı kullanarak, bu koşulların tamamını kabul etmiş sayılırsınız. Eğer koşulları kabul etmiyorsanız uygulamayı kullanmayınız.
               </Text>
               
               <Text style={styles.termsBodyTitle}>2. Hizmet Kullanımı</Text>
@@ -326,11 +326,11 @@ export default function RegisterStep3() {
               
               <Text style={styles.termsBodyTitle}>4. Puan ve Rozet Sistemi</Text>
               <Text style={styles.termsBodyText}>
-                Uygulama içi kazanılan puanlar ve rozetler sanal olup, herhangi bir maddi değer taşımaz. Kervan ekibi puanlama sisteminde değişiklik yapma hakkını saklı tutar.
+                Uygulama içi kazanılan puanlar ve rozetler sanal olup, herhangi bir maddi değer taşımaz. FikirForum ekibi puanlama sisteminde değişiklik yapma hakkını saklı tutar.
               </Text>
 
               <Text style={styles.termsBodyText}>
-                Kervan topluluğuna katıldığınız için teşekkür eder, keyifli ve verimli etkinlikler dileriz!
+                FikirForum topluluğuna katıldığınız için teşekkür eder, keyifli ve verimli etkinlikler dileriz!
               </Text>
             </ScrollView>
             <TouchableOpacity 

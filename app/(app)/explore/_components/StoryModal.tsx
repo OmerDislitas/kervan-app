@@ -110,9 +110,9 @@ const StoryModal = React.memo(function StoryModal({
       const slide = activeStoryGroup.slides[currentSlideIndex];
       if (slide) {
         if (slide.type === 'hap_bilgi') {
-          AsyncStorage.setItem('@kervan_last_fact_read', Date.now().toString()).catch(() => {});
+          AsyncStorage.setItem('@fikirforum_last_fact_read', Date.now().toString()).catch(() => {});
         } else if (slide.type === 'daily_quote') {
-          AsyncStorage.setItem('@kervan_last_quote_read', Date.now().toString()).catch(() => {});
+          AsyncStorage.setItem('@fikirforum_last_quote_read', Date.now().toString()).catch(() => {});
         }
       }
     }

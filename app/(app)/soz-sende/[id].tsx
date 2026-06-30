@@ -116,7 +116,7 @@ export default function QuestionDetailScreen() {
       queryClient.setQueryData(['comments', id], (old: any[] = []) => [...old, newCommentData]);
       queryClient.invalidateQueries({ queryKey: ['profile-stats', profile?.id] });
       queryClient.invalidateQueries({ queryKey: ['trend-questions-explore'] });
-      AsyncStorage.setItem('@kervan_last_comment_time', Date.now().toString()).catch(() => {});
+      AsyncStorage.setItem('@fikirforum_last_comment_time', Date.now().toString()).catch(() => {});
 
       const senderName = profile?.full_name || 'Biri';
 
@@ -204,7 +204,7 @@ export default function QuestionDetailScreen() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['comments', id] });
       if (!variables.hasLiked) {
-        AsyncStorage.setItem('@kervan_last_like_time', Date.now().toString()).catch(() => {});
+        AsyncStorage.setItem('@fikirforum_last_like_time', Date.now().toString()).catch(() => {});
         
         // Send notification to comment author
         const comment = comments.find(c => c.id === variables.commentId);

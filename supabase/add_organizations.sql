@@ -1,5 +1,5 @@
 -- ============================================================
--- Kervan Uygulaması - STK / Organizasyon Desteği Migration
+-- FikirForum Uygulaması - STK / Organizasyon Desteği Migration
 -- Supabase Dashboard > SQL Editor'de çalıştırın
 -- ============================================================
 
@@ -63,20 +63,20 @@ CREATE POLICY "Admin organizasyon silebilir"
 -- 4) Örnek STK / Kurum Verileri (Seed Data)
 INSERT INTO public.organizations (name, logo_url, description)
 VALUES 
-  ('Kervan Gençlik Hareketi', 'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=120&auto=format&fit=crop&q=60', 'Gençliğin gelişimini hedefleyen öncü hareket.'),
+  ('FikirForum Gençlik Hareketi', 'https://images.unsplash.com/photo-1582213782179-e0d53f98f2ca?w=120&auto=format&fit=crop&q=60', 'Gençliğin gelişimini hedefleyen öncü hareket.'),
   ('İHH İnsani Yardım Vakfı', 'https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=120&auto=format&fit=crop&q=60', 'Dünya genelinde insani yardım faaliyetleri yürüten vakıf.'),
   ('Türkiye Diyanet Vakfı (TDV)', 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=120&auto=format&fit=crop&q=60', 'Eğitim, kültür ve sosyal yardım alanlarında faaliyet gösteren vakıf.'),
   ('TÜGVA (Türkiye Gençlik Vakfı)', 'https://images.unsplash.com/photo-1517486808906-6ca8b3f04846?w=120&auto=format&fit=crop&q=60', 'Gençlerin sosyal, fiziksel ve kültürel gelişimini destekleyen vakıf.'),
   ('Yeşilay', 'https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=120&auto=format&fit=crop&q=60', 'Bağımlılıkla mücadelede öncü sivil toplum kuruluşu.')
 ON CONFLICT (name) DO NOTHING;
 
--- 5) Mevcut yayınlanmış etkinlikleri ilk STK'ya (Kervan Gençlik) varsayılan olarak bağlayalım
+-- 5) Mevcut yayınlanmış etkinlikleri ilk STK'ya (FikirForum Gençlik) varsayılan olarak bağlayalım
 DO $$
 DECLARE
-  kervan_id uuid;
+  fikirforum_id uuid;
 BEGIN
-  SELECT id INTO kervan_id FROM public.organizations WHERE name = 'Kervan Gençlik Hareketi' LIMIT 1;
-  IF kervan_id IS NOT NULL THEN
-    UPDATE public.events SET organization_id = kervan_id WHERE organization_id IS NULL;
+  SELECT id INTO fikirforum_id FROM public.organizations WHERE name = 'FikirForum Gençlik Hareketi' LIMIT 1;
+  IF fikirforum_id IS NOT NULL THEN
+    UPDATE public.events SET organization_id = fikirforum_id WHERE organization_id IS NULL;
   END IF;
 END $$;

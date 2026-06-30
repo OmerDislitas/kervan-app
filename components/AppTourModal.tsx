@@ -20,7 +20,7 @@ const TOUR_SLIDES = [
   {
     id: 'home',
     title: 'Ana Sayfa',
-    subtitle: 'Kervan\'ın Kalbi',
+    subtitle: 'FikirForum\'ın Kalbi',
     desc: 'Gündemi takip et, günlük pusulayla günün rotasını çiz ve en güncel gelişmeleri tek ekranda gör.',
     icon: 'home',
     route: '/(app)',

@@ -12,7 +12,7 @@ import * as SplashScreen from 'expo-splash-screen';
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 
-// KERVAN yazısının yaklaşık yüksekliği — logo bu kadar yukarı kayacak
+// FIKIRFORUM yazısının yaklaşık yüksekliği — logo bu kadar yukarı kayacak
 const TEXT_BLOCK_HEIGHT = 40;
 
 export default function Index() {
@@ -30,7 +30,7 @@ export default function Index() {
       reduceMotion: ReduceMotion.Never,
     });
 
-    // 2) 4000ms gecikme + 1200ms fade → KERVAN yazısı belirir
+    // 2) 4000ms gecikme + 1200ms fade → FIKIRFORUM yazısı belirir
     // Not: Routing _layout.tsx'teki 7500ms timer tarafından yönetiliyor.
     // Bu animasyon sadece görsel — takılmaya neden olmaz.
     textOpacity.value = withDelay(
@@ -61,7 +61,7 @@ export default function Index() {
           resizeMode="contain"
         />
         <Animated.Text style={[styles.brandText, textStyle]}>
-          KERVAN
+          FİKİRFORUM
         </Animated.Text>
       </View>
     </View>

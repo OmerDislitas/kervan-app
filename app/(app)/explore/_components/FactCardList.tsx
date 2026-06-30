@@ -74,7 +74,7 @@ const FactCard = React.memo(function FactCard({
       const nextVal = !prev;
       if (nextVal) {
         // Kart açıldıysa okundu olarak işaretlemek için timestamp kaydet
-        AsyncStorage.setItem('@kervan_last_fact_read', Date.now().toString()).catch(() => {});
+        AsyncStorage.setItem('@fikirforum_last_fact_read', Date.now().toString()).catch(() => {});
       }
       return nextVal;
     });
@@ -86,7 +86,7 @@ const FactCard = React.memo(function FactCard({
       Animated.timing(btnScale, { toValue: 0.93, duration: 80, useNativeDriver: true }),
       Animated.spring(btnScale, { toValue: 1, useNativeDriver: true, tension: 300, friction: 15 }),
     ]).start();
-    AsyncStorage.setItem('@kervan_last_fact_read', Date.now().toString()).catch(() => {});
+    AsyncStorage.setItem('@fikirforum_last_fact_read', Date.now().toString()).catch(() => {});
     onOkudum(item);
   }, [expanded, item, onOkudum, btnScale]);
 

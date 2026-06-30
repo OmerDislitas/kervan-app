@@ -9,8 +9,8 @@ import { useSettingsStore } from '@/stores/settingsStore';
 /** Expo Go'da mı çalışıyor? (SDK 53+ Android push desteği kaldırıldı) */
 const IS_EXPO_GO = Constants.appOwnership === 'expo';
 
-const NOTIF_STORAGE_KEY = '@kervan_notifications';
-const NOTIF_SCHEDULED_TODAY_KEY = '@kervan_notif_scheduled_date';
+const NOTIF_STORAGE_KEY = '@fikirforum_notifications';
+const NOTIF_SCHEDULED_TODAY_KEY = '@fikirforum_notif_scheduled_date';
 
 /** Bildirimi doğrudan panel geçmişine kaydet */
 async function saveToPanelHistory(id: string, title: string, body: string, type: string, eventId?: string) {
@@ -60,7 +60,7 @@ export async function requestPermissions(): Promise<boolean> {
 
   if (Platform.OS === 'android') {
     await Notifications.setNotificationChannelAsync('default', {
-      name: 'Kervan Bildirimleri',
+      name: 'FikirForum Bildirimleri',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#E8A838',
@@ -243,7 +243,7 @@ export async function scheduleWeeklyFridayMessage(): Promise<void> {
       identifier: notifId,
       content: {
         title: '🌹 Hayırlı Cumalar',
-        body: 'Kervan ailesi olarak mübarek cumanızı tebrik ederiz. Dualarda buluşmak dileğiyle.',
+        body: 'FikirForum ailesi olarak mübarek cumanızı tebrik ederiz. Dualarda buluşmak dileğiyle.',
         sound: true,
         data: { type: 'friday-message' }
       },
@@ -263,7 +263,7 @@ export async function scheduleWeeklyFridayMessage(): Promise<void> {
 const DAILY_WISDOM = [
   { text: "Birlikte yola çıkmak bir başlangıçtır, bir arada kalmak ilerlemedir, birlikte çalışmak ise başarıdır.", author: "Henry Ford" },
   { text: "İyilik yap, denize at; balık bilmezse Halik bilir.", author: "Anonim" },
-  { text: "Gençlik, geleceğin tohumudur; onu sevgi ve bilgiyle sula.", author: "Kervan" },
+  { text: "Gençlik, geleceğin tohumudur; onu sevgi ve bilgiyle sula.", author: "FikirForum" },
   { text: "Yol seni nereye götürüyorsa oraya gitme, yol olmayan yerden git ki iz bırak.", author: "R.W. Emerson" },
   { text: "En büyük başarı, hiçbir zaman düşmemekte değil, her düştüğünde tekrar ayağa kalkabilmektedir.", author: "Konfüçyüs" },
   { text: "Bilgi ışık gibidir; paylaştıkça çoğalır.", author: "Mevlana" },
@@ -381,7 +381,7 @@ export async function scheduleDailyFactsNotification(): Promise<void> {
       identifier: notifId,
       content: {
         title: '📚 Bugünün Hap Bilgileri Hazır!',
-        body: 'Yeni bilgilerini keşfetmeye hazır mısın? Kervan\'da bugüne özel içerikler seni bekliyor.',
+        body: 'Yeni bilgilerini keşfetmeye hazır mısın? FikirForum\'da bugüne özel içerikler seni bekliyor.',
         sound: true,
         data: { type: 'daily-facts', screen: 'explore' },
       },

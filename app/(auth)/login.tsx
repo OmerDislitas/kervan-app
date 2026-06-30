@@ -83,7 +83,7 @@ export default function LoginScreen() {
               resizeMode="cover"
             />
           </View>
-          <Text style={styles.appName}>Kervan</Text>
+          <Text style={styles.appName}>FikirForum</Text>
         </View>
 
         {/* Form */}

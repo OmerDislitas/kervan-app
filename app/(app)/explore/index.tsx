@@ -150,7 +150,7 @@ export default function ExploreScreen() {
     const entries: Record<string, boolean> = {};
     await Promise.all(
       facts.map(async (f) => {
-        const key = `@kervan_fact_reward_${todayKey}_${f.id}`;
+        const key = `@fikirforum_fact_reward_${todayKey}_${f.id}`;
         const val = await AsyncStorage.getItem(key);
         entries[f.id] = val === 'true';
       })
@@ -184,10 +184,10 @@ export default function ExploreScreen() {
   // ─── Okudum Aksiyonu ────────────────────────────────────────────────────
   const handleOkudum = useCallback(async (fact: FactItem) => {
     if (!profile?.id) return;
-    const storageKey = `@kervan_fact_reward_${todayKey}_${fact.id}`;
+    const storageKey = `@fikirforum_fact_reward_${todayKey}_${fact.id}`;
     
     // Pusula görevini doğrulamak için son okuma zamanını kaydet
-    await AsyncStorage.setItem('@kervan_last_fact_read', Date.now().toString()).catch(() => {});
+    await AsyncStorage.setItem('@fikirforum_last_fact_read', Date.now().toString()).catch(() => {});
 
     const alreadyLocal = await AsyncStorage.getItem(storageKey);
     if (alreadyLocal === 'true') return;

@@ -28,7 +28,7 @@ export const HomeHero = React.memo(function HomeHero({ onPressEvents, onPressSoz
       <View style={styles.heroContent}>
         <View style={styles.heroBadge}>
           <Ionicons name="sparkles" size={12} color={themeColors.primary} />
-          <Text style={styles.heroBadgeText}>KERVAN ÖZEL</Text>
+          <Text style={styles.heroBadgeText}>FİKİRFORUM ÖZEL</Text>
         </View>
         <Text style={styles.heroSubtitle}>
           Topluluğun bir parçası ol, yeni anılar biriktir ve geleceği birlikte inşa edelim.

@@ -91,7 +91,7 @@ export default function HomeScreen() {
 
   async function checkNotificationsFirstPrompt() {
     try {
-      const askedKey = `@kervan_notif_first_prompt_shown_${profile?.id}`;
+      const askedKey = `@fikirforum_notif_first_prompt_shown_${profile?.id}`;
       const asked = await AsyncStorage.getItem(askedKey);
       if (asked === null) {
         Alert.alert(
@@ -120,7 +120,7 @@ export default function HomeScreen() {
                   useSettingsStore.getState().setNotificationsEnabled(false);
                   Alert.alert(
                     'İzin Gerekli',
-                    'Bildirimleri açabilmek için sistem ayarlarından Kervan uygulamasına bildirim izni vermelisiniz.'
+                    'Bildirimleri açabilmek için sistem ayarlarından FikirForum uygulamasına bildirim izni vermelisiniz.'
                   );
                 }
               },

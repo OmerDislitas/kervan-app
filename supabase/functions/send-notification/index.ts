@@ -2,7 +2,7 @@
 // Native/TypeScript proje derlemesine dahil değildir. Deno global'leri ve
 // uzak (esm.sh) importları RN tsconfig'inde tanınmadığı için tip kontrolü kapalı.
 // ============================================================
-// Kervan — Push Bildirimi Edge Function (Y-2 düzeltmesi)
+// FikirForum — Push Bildirimi Edge Function (Y-2 düzeltmesi)
 // ------------------------------------------------------------
 // Amaç: Push token'ları istemciye ASLA açmadan, yalnızca giriş
 // yapmış kullanıcıların ÖNCEDEN TANIMLI şablonlarla bildirim

@@ -18,9 +18,9 @@ const sections = [
   {
     icon: 'document-text-outline' as const,
     title: '1. Genel Hükümler',
-    content: `Kervan uygulamasını ("Uygulama") indirerek veya kullanarak işbu Kullanım Koşulları'nı ("Koşullar") okuduğunuzu, anladığınızı ve kabul ettiğinizi beyan etmiş olursunuz.
+    content: `FikirForum uygulamasını ("Uygulama") indirerek veya kullanarak işbu Kullanım Koşulları'nı ("Koşullar") okuduğunuzu, anladığınızı ve kabul ettiğinizi beyan etmiş olursunuz.
 
-Bu Koşullar; Kervan'ı geliştiren ekip ("Kervan Ekibi") ile uygulamayı kullanan bireyler ("Kullanıcı") arasındaki hukuki ilişkiyi düzenlemektedir. Koşulları kabul etmiyorsanız lütfen uygulamayı kullanmayınız.`,
+Bu Koşullar; FikirForum'ı geliştiren ekip ("FikirForum Ekibi") ile uygulamayı kullanan bireyler ("Kullanıcı") arasındaki hukuki ilişkiyi düzenlemektedir. Koşulları kabul etmiyorsanız lütfen uygulamayı kullanmayınız.`,
   },
   {
     icon: 'person-circle-outline' as const,
@@ -34,7 +34,7 @@ Hesabınızın güvenliğini sağlamak, şifrenizi gizli tutmak ve yetkisiz eri�
   {
     icon: 'shield-outline' as const,
     title: '3. Kabul Edilebilir Kullanım',
-    content: `Kervan; İslami değerlere, Türk kültürüne ve tarihe duyarlı, seviyeli bir topluluk ortamı sunmayı hedeflemektedir. Bu doğrultuda aşağıdaki davranışlar kesinlikle yasaktır:
+    content: `FikirForum; İslami değerlere, Türk kültürüne ve tarihe duyarlı, seviyeli bir topluluk ortamı sunmayı hedeflemektedir. Bu doğrultuda aşağıdaki davranışlar kesinlikle yasaktır:
 
 • Nefret söylemi, ayrımcılık veya şiddete teşvik içeren içerik paylaşmak
 • Başkalarının kişisel bilgilerini izinsiz paylaşmak (doxxing)
@@ -48,14 +48,14 @@ Bu kurallara aykırı davranışlar; içeriğin kaldırılması, hesabın askıy
   {
     icon: 'create-outline' as const,
     title: '4. İçerik ve Fikri Mülkiyet',
-    content: `Uygulama üzerinde paylaştığınız yorumlar, görüşler ve diğer içerikler size aittir; ancak bu içerikleri Kervan platformunda yayınlamakla, söz konusu içerikleri sergileme, dağıtma ve tanıtma amacıyla kullanmamız için bize ücretsiz, münhasır olmayan bir lisans vermiş olursunuz.
+    content: `Uygulama üzerinde paylaştığınız yorumlar, görüşler ve diğer içerikler size aittir; ancak bu içerikleri FikirForum platformunda yayınlamakla, söz konusu içerikleri sergileme, dağıtma ve tanıtma amacıyla kullanmamız için bize ücretsiz, münhasır olmayan bir lisans vermiş olursunuz.
 
-Kervan adı, logosu, tasarım ögeleri, uygulama içi grafikler ve özgün içerikler Kervan Ekibi'nin fikri mülkiyetidir. İzinsiz kopyalanamaz, çoğaltılamaz veya ticari amaçla kullanılamaz.`,
+FikirForum adı, logosu, tasarım ögeleri, uygulama içi grafikler ve özgün içerikler FikirForum Ekibi'nin fikri mülkiyetidir. İzinsiz kopyalanamaz, çoğaltılamaz veya ticari amaçla kullanılamaz.`,
   },
   {
     icon: 'ban-outline' as const,
     title: '5. Hizmetin Askıya Alınması',
-    content: `Kervan Ekibi; kullanıcıların hesaplarını önceden bildirimde bulunmaksızın ve herhangi bir gerekçe göstermeksizin geçici veya kalıcı olarak askıya alma ya da silme hakkını saklı tutar.
+    content: `FikirForum Ekibi; kullanıcıların hesaplarını önceden bildirimde bulunmaksızın ve herhangi bir gerekçe göstermeksizin geçici veya kalıcı olarak askıya alma ya da silme hakkını saklı tutar.
 
 Bu durum özellikle şu hallerde uygulanabilir:
 • İşbu Koşullar'ın ihlal edilmesi
@@ -66,23 +66,23 @@ Bu durum özellikle şu hallerde uygulanabilir:
   {
     icon: 'refresh-circle-outline' as const,
     title: '6. Değişiklikler',
-    content: `Kervan Ekibi, bu Koşullar'ı önceden haber vermeksizin güncelleme hakkına sahiptir. Yapılan değişiklikler uygulama üzerinden duyurulacak ve güncelleme tarihiyle birlikte yayımlanacaktır.
+    content: `FikirForum Ekibi, bu Koşullar'ı önceden haber vermeksizin güncelleme hakkına sahiptir. Yapılan değişiklikler uygulama üzerinden duyurulacak ve güncelleme tarihiyle birlikte yayımlanacaktır.
 
 Değişikliklerden sonra uygulamayı kullanmaya devam etmeniz, yeni koşulları kabul ettiğiniz anlamına gelir. Koşulları periyodik olarak incelemenizi tavsiye ederiz.`,
   },
   {
     icon: 'alert-circle-outline' as const,
     title: '7. Sorumluluk Sınırlaması',
-    content: `Kervan, "olduğu gibi" sunulmaktadır. Uygulama kesintisiz veya hatasız çalışacağına dair herhangi bir garanti vermemektedir. Kullanıcıların uygulama üzerinden eriştiği içeriklerden kaynaklanabilecek doğrudan veya dolaylı zararlardan Kervan Ekibi sorumlu tutulamaz.
+    content: `FikirForum, "olduğu gibi" sunulmaktadır. Uygulama kesintisiz veya hatasız çalışacağına dair herhangi bir garanti vermemektedir. Kullanıcıların uygulama üzerinden eriştiği içeriklerden kaynaklanabilecek doğrudan veya dolaylı zararlardan FikirForum Ekibi sorumlu tutulamaz.
 
-Kullanıcıların birbiriyle gerçekleştirdiği etkileşimlerden doğan anlaşmazlıklarda Kervan Ekibi taraf olmayacaktır.`,
+Kullanıcıların birbiriyle gerçekleştirdiği etkileşimlerden doğan anlaşmazlıklarda FikirForum Ekibi taraf olmayacaktır.`,
   },
   {
     icon: 'mail-outline' as const,
     title: '8. İletişim',
     content: `Bu Koşullar hakkında sorularınız veya bildirimleriniz için bizimle iletişime geçebilirsiniz:
 
-📧 kervanapp@gmail.com
+📧 fikirforumapp@gmail.com
 
 Talepleriniz en geç 15 iş günü içinde yanıtlanacaktır.`,
   },
@@ -95,7 +95,7 @@ export default function TermsScreen() {
 
   const handleEmailPress = async () => {
     try {
-      await Linking.openURL('mailto:kervanapp@gmail.com');
+      await Linking.openURL('mailto:fikirforumapp@gmail.com');
     } catch (error) {
       console.log('Error opening mail client', error);
     }
@@ -118,7 +118,7 @@ export default function TermsScreen() {
           <Ionicons name="document-text" size={32} color={themeColors.primary} />
           <Text style={styles.introTitle}>Kullanım Koşulları</Text>
           <Text style={styles.introSubtitle}>
-            Kervan uygulamasını kullanırken lütfen bu koşulları dikkatlice okuyunuz. Bu koşullar, uygulamamızı kullanırken hak ve sorumluluklarınızı düzenlemektedir.
+            FikirForum uygulamasını kullanırken lütfen bu koşulları dikkatlice okuyunuz. Bu koşullar, uygulamamızı kullanırken hak ve sorumluluklarınızı düzenlemektedir.
           </Text>
           <View style={styles.updateBadge}>
             <Ionicons name="time-outline" size={13} color={themeColors.textSecondary} />
@@ -149,7 +149,7 @@ export default function TermsScreen() {
                     activeOpacity={0.7}
                   >
                     <Ionicons name="mail-open-outline" size={16} color={themeColors.primary} />
-                    <Text style={styles.emailText}>kervanapp@gmail.com</Text>
+                    <Text style={styles.emailText}>fikirforumapp@gmail.com</Text>
                   </TouchableOpacity>
 
                   <Text style={styles.sectionBody}>

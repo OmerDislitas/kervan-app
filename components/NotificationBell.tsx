@@ -16,7 +16,7 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 
-const STORAGE_KEY = '@kervan_notifications';
+const STORAGE_KEY = '@fikirforum_notifications';
 const MAX_NOTIFICATIONS = 30;
 
 export type NotificationItem = {

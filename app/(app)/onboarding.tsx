@@ -91,7 +91,7 @@ export default function OnboardingScreen() {
             </View>
             <Text style={styles.title}>Kullanıcı Adı Belirle</Text>
             <Text style={styles.subtitle}>
-              Kervan topluluğunda sizi tanımlayacak benzersiz bir kullanıcı adı seçin. Yorumlarda bu isimle görüneceksiniz.
+              FikirForum topluluğunda sizi tanımlayacak benzersiz bir kullanıcı adı seçin. Yorumlarda bu isimle görüneceksiniz.
             </Text>
           </View>
 

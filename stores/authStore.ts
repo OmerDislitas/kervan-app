@@ -66,29 +66,29 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   fetchProfile: async (userId: string) => {
     try {
       // Hesap değişimi (veya ilk giriş) durumunda önceki hesaba ait lokal verileri (pusula, bildirim) temizle
-      const previousUserId = await AsyncStorage.getItem('@kervan_last_logged_in_user');
+      const previousUserId = await AsyncStorage.getItem('@fikirforum_last_logged_in_user');
       if (previousUserId !== userId) {
         const keysToClear = [
-          '@kervan_notifications',
-          '@kervan_compass_task',
-          '@kervan_compass_time',
-          '@kervan_compass_completed',
-          '@kervan_compass_points_earned',
-          '@kervan_compass_start_points',
-          '@kervan_last_comment_time',
-          '@kervan_last_fact_read',
-          '@kervan_last_like_time',
-          '@kervan_last_profile_view',
-          '@kervan_last_quote_read',
-          '@kervan_last_follow',
-          '@kervan_last_explore_view',
-          '@kervan_last_event_view'
+          '@fikirforum_notifications',
+          '@fikirforum_compass_task',
+          '@fikirforum_compass_time',
+          '@fikirforum_compass_completed',
+          '@fikirforum_compass_points_earned',
+          '@fikirforum_compass_start_points',
+          '@fikirforum_last_comment_time',
+          '@fikirforum_last_fact_read',
+          '@fikirforum_last_like_time',
+          '@fikirforum_last_profile_view',
+          '@fikirforum_last_quote_read',
+          '@fikirforum_last_follow',
+          '@fikirforum_last_explore_view',
+          '@fikirforum_last_event_view'
         ];
         if (previousUserId) {
-          keysToClear.push(`@kervan_notif_first_prompt_shown_${previousUserId}`);
+          keysToClear.push(`@fikirforum_notif_first_prompt_shown_${previousUserId}`);
         }
         await AsyncStorage.multiRemove(keysToClear);
-        await AsyncStorage.setItem('@kervan_last_logged_in_user', userId);
+        await AsyncStorage.setItem('@fikirforum_last_logged_in_user', userId);
       }
 
       // Kendi tam profilini (email/phone/push_token dahil) SECURITY DEFINER
@@ -139,7 +139,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         isAdmin: prof?.role === 'admin',
       });
       try {
-        await AsyncStorage.setItem('@kervan_cached_profile', JSON.stringify(prof));
+        await AsyncStorage.setItem('@fikirforum_cached_profile', JSON.stringify(prof));
       } catch (cacheErr) {
         console.warn('[authStore] Error caching profile:', cacheErr);
       }
@@ -153,7 +153,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   loadCachedProfile: async () => {
     try {
-      const cached = await AsyncStorage.getItem('@kervan_cached_profile');
+      const cached = await AsyncStorage.getItem('@fikirforum_cached_profile');
       if (cached) {
         const prof = JSON.parse(cached) as UserProfile;
         set({
@@ -169,21 +169,21 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   signOut: async () => {
     try {
       const keysToClear = [
-        '@kervan_notifications',
-        '@kervan_compass_task',
-        '@kervan_compass_time',
-        '@kervan_compass_completed',
-        '@kervan_compass_points_earned',
-        '@kervan_compass_start_points',
-        '@kervan_last_comment_time',
-        '@kervan_last_fact_read',
-        '@kervan_last_like_time',
-        '@kervan_last_profile_view',
-        '@kervan_last_quote_read',
-        '@kervan_last_follow',
-        '@kervan_last_explore_view',
-        '@kervan_last_event_view',
-        '@kervan_cached_profile'
+        '@fikirforum_notifications',
+        '@fikirforum_compass_task',
+        '@fikirforum_compass_time',
+        '@fikirforum_compass_completed',
+        '@fikirforum_compass_points_earned',
+        '@fikirforum_compass_start_points',
+        '@fikirforum_last_comment_time',
+        '@fikirforum_last_fact_read',
+        '@fikirforum_last_like_time',
+        '@fikirforum_last_profile_view',
+        '@fikirforum_last_quote_read',
+        '@fikirforum_last_follow',
+        '@fikirforum_last_explore_view',
+        '@fikirforum_last_event_view',
+        '@fikirforum_cached_profile'
       ];
       await AsyncStorage.multiRemove(keysToClear);
     } catch (err) {

@@ -101,7 +101,7 @@ export default function ProfileScreen() {
   }, [profile?.id, queryClient]);
   
   React.useEffect(() => {
-    AsyncStorage.setItem('@kervan_last_profile_view', Date.now().toString()).catch(() => {});
+    AsyncStorage.setItem('@fikirforum_last_profile_view', Date.now().toString()).catch(() => {});
   }, []);
  
   const privacyMutation = useMutation({

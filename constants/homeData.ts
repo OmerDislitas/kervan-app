@@ -35,7 +35,7 @@ export const HOME_COMPASS_TASKS: CompassTask[] = [
 export const HOME_WISDOM_POOL: WisdomQuote[] = [
   { text: "Birlikte yola çıkmak bir başlangıçtır, bir arada kalmak ilerlemedir, birlikte çalışmak ise başarıdır.", author: "Henry Ford" },
   { text: "İyilik yap, denize at; balık bilmezse Halik bilir.", author: "Anonim" },
-  { text: "Gençlik, geleceğin tohumudur; onu sevgi ve bilgiyle sula.", author: "Kervan" },
+  { text: "Gençlik, geleceğin tohumudur; onu sevgi ve bilgiyle sula.", author: "FikirForum" },
   { text: "Yol seni nereye götürüyorsa oraya gitme, yol olmayan yerden git ki iz bırak.", author: "R.W. Emerson" },
   { text: "En büyük başarı, hiçbir zaman düşmemekte değil, her düştüğünde tekrar ayağa kalkabilmektedir.", author: "Konfüçyüs" },
   { text: "Bilgi ışık gibidir; paylaştıkça çoğalır.", author: "Mevlana" },
@@ -69,7 +69,7 @@ export const HOME_HISTORICAL_EVENTS_POOL: HistoryEvent[][] = [
   [
     { title: "Fetih Hazırlıkları", detail: "Fatih Sultan Mehmet kuşatma planlarını inceledi." },
     { title: "Gülhane Hatt-ı Hümayunu", detail: "Tanzimat Fermanı ilan edildi." },
-    { title: "Kervan Vizyon", detail: "Platformun ilk temelleri atıldı." }
+    { title: "FikirForum Vizyon", detail: "Platformun ilk temelleri atıldı." }
   ],
   [
     { title: "Mescid-i Aksa", detail: "Kudüs'te önemli tarihi gelişmeler yaşandı." },

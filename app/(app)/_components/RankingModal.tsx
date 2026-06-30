@@ -34,7 +34,7 @@ export const RankingModal = React.memo(function RankingModal({
         <View style={styles.content}>
           <View style={styles.header}>
             <View>
-              <Text style={styles.title}>Kervan Sıralaması</Text>
+              <Text style={styles.title}>FikirForum Sıralaması</Text>
               <Text style={styles.subtitle}>En yüksek puanlı ilk 10 yolcu</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>

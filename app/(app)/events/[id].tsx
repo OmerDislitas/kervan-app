@@ -60,7 +60,7 @@ export default function EventDetailScreen() {
   const [showGenderModal, setShowGenderModal] = useState(false);
 
   React.useEffect(() => {
-    AsyncStorage.setItem('@kervan_last_event_view', Date.now().toString()).catch(() => {});
+    AsyncStorage.setItem('@fikirforum_last_event_view', Date.now().toString()).catch(() => {});
   }, []);
 
   const { data: event, isLoading } = useQuery({

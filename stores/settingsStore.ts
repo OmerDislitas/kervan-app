@@ -28,7 +28,7 @@ export const useSettingsStore = create<SettingsState>()(
       setDataSaver: (dataSaver) => set({ dataSaver }),
     }),
     {
-      name: 'kervan-settings',
+      name: 'fikirforum-settings',
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

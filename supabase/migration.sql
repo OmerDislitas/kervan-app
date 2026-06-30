@@ -1,5 +1,5 @@
 -- ============================================================
--- Kervan UygulamasÄ± - Supabase VeritabanÄ± Migration
+-- FikirForum UygulamasÄ± - Supabase VeritabanÄ± Migration
 -- Supabase Dashboard > SQL Editor'de Ã§alÄ±ÅŸtÄ±rÄ±n
 -- ============================================================
 

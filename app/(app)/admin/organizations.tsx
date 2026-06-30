@@ -270,7 +270,7 @@ export default function AdminOrganizationsScreen() {
                 <Text style={styles.label}>STK / Vakıf Adı *</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="Örn: İHH, Kervan, TDV vb."
+                  placeholder="Örn: İHH, FikirForum, TDV vb."
                   placeholderTextColor={themeColors.textMuted}
                   value={form.name}
                   onChangeText={(v) => setForm((prev) => ({ ...prev, name: v }))}

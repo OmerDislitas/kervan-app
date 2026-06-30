@@ -29,7 +29,7 @@ export default function BadgesModal({ visible, onClose, userStats }: BadgesModal
           <View style={styles.header}>
             <View style={styles.headerLeft}>
               <Ionicons name="medal" size={24} color={themeColors.primary} />
-              <Text style={styles.headerTitle}>Kervan Rozetleri</Text>
+              <Text style={styles.headerTitle}>FikirForum Rozetleri</Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
               <Ionicons name="close" size={24} color={themeColors.textPrimary} />
@@ -37,7 +37,7 @@ export default function BadgesModal({ visible, onClose, userStats }: BadgesModal
           </View>
           
           <Text style={styles.description}>
-            Kervan'da aktif oldukça rozetler kazanırsın. İşte kazanabileceğin ve kazandığın rozetler:
+            FikirForum'da aktif oldukça rozetler kazanırsın. İşte kazanabileceğin ve kazandığın rozetler:
           </Text>
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>

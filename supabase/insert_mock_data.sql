@@ -1,5 +1,5 @@
 -- ============================================================
--- Kervan Uygulaması - Mock Veri Ekleme Betiği
+-- FikirForum Uygulaması - Mock Veri Ekleme Betiği
 -- Supabase Dashboard > SQL Editor'de çalıştırın
 -- ============================================================
 
@@ -33,7 +33,7 @@ BEGIN
   -- 2) MOCK USERS & PROFILES (60 Users)
   FOR i IN 1..60 LOOP
     v_user_id := gen_random_uuid();
-    v_email := 'kullanici' || i || '@kervanapp.com';
+    v_email := 'kullanici' || i || '@fikirforumapp.com';
     v_username := 'kullanici_' || i;
     v_name := 'Kullanıcı ' || i;
 
@@ -87,7 +87,7 @@ BEGIN
     VALUES (
       v_event_title,
       'Bu ' || i || ' numaralı etkinliktir. Katılım sağlayarak puan kazanabilir ve yeni insanlarla tanışabilirsiniz.',
-      'Kervan Merkezi Konferans Salonu ' || (i % 5 + 1),
+      'FikirForum Merkezi Konferans Salonu ' || (i % 5 + 1),
       now() + (i || ' days')::interval + '2 hours'::interval,
       false,
       null,
@@ -156,7 +156,7 @@ BEGIN
     VALUES (
       v_user_id,
       'Öneri Tartışma Başlığı #' || i,
-      'Bu konunun Kervan topluluğu tarafından tartışılmasının faydalı olacağını düşünüyorum.',
+      'Bu konunun FikirForum topluluğu tarafından tartışılmasının faydalı olacağını düşünüyorum.',
       (ARRAY['pending', 'reviewed', 'accepted', 'rejected'])[ (i % 4) + 1 ],
       now() - (i || ' days')::interval
     );

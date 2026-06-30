@@ -63,7 +63,7 @@ export default function SettingsScreen() {
               } else {
                 Alert.alert(
                   'İzin Gerekli',
-                  'Bildirimleri açabilmek için sistem ayarlarından Kervan uygulamasına bildirim izni vermelisiniz.'
+                  'Bildirimleri açabilmek için sistem ayarlarından FikirForum uygulamasına bildirim izni vermelisiniz.'
                 );
               }
             },
@@ -200,7 +200,7 @@ export default function SettingsScreen() {
           <TouchableOpacity style={styles.settingAction} activeOpacity={0.7}>
             <View style={styles.settingInfo}>
               <Ionicons name="information-circle" size={20} color={themeColors.textSecondary} />
-              <Text style={styles.settingActionText}>Kervan Hakkında</Text>
+              <Text style={styles.settingActionText}>FikirForum Hakkında</Text>
             </View>
             <View style={styles.versionBadge}>
               <Text style={styles.versionText}>v1.2.0</Text>

@@ -1,5 +1,5 @@
 -- ============================================================
--- KERVAN — profiles Tablosu RLS Temizliği
+-- FIKIRFORUM — profiles Tablosu RLS Temizliği
 -- fix_profiles_rls.sql
 -- ------------------------------------------------------------
 -- Supabase Dashboard > SQL Editor'de çalıştırın.

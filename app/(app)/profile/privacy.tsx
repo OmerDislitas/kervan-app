@@ -12,7 +12,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Typography, Spacing, BorderRadius, useThemeColors } from '@/constants/theme';
 
-const SUPPORT_EMAIL = 'kervanapp@gmail.com';
+const SUPPORT_EMAIL = 'fikirforumapp@gmail.com';
 
 const LAST_UPDATED = '31 Mayıs 2026';
 
@@ -20,7 +20,7 @@ const sections = [
   {
     icon: 'person-outline' as const,
     title: '1. Topladığımız Kişisel Bilgiler',
-    content: `Kervan uygulaması; hizmetlerimizi sunabilmek için bazı kişisel verilerinizi toplamaktadır. Topladığımız veriler şunlardır:
+    content: `FikirForum uygulaması; hizmetlerimizi sunabilmek için bazı kişisel verilerinizi toplamaktadır. Topladığımız veriler şunlardır:
 
 Hesap Bilgileri
 • Ad, soyad ve kullanıcı adı
@@ -58,7 +58,7 @@ Teknik Veriler
   {
     icon: 'lock-closed-outline' as const,
     title: '3. Verileriniz Nasıl Korunuyor?',
-    content: `Kervan, verilerinizin güvenliğini en üst düzeyde önemsemektedir. Bu kapsamda alınan teknik ve idari tedbirler şunlardır:
+    content: `FikirForum, verilerinizin güvenliğini en üst düzeyde önemsemektedir. Bu kapsamda alınan teknik ve idari tedbirler şunlardır:
 
 • Tüm veriler endüstri standardı şifreleme (SSL/TLS) protokolleriyle aktarılır.
 • Şifreleriniz bcrypt algoritmasıyla hash'lenerek saklanır — hiçbir çalışanımız dahil kimse şifrenizi göremez.
@@ -71,7 +71,7 @@ Hiçbir sistem %100 güvenli olmasa da olası bir güvenlik ihlalinde kullanıc�
   {
     icon: 'share-social-outline' as const,
     title: '4. Verilerinizi Kimlerle Paylaşıyoruz?',
-    content: `Kervan, kişisel verilerinizi üçüncü taraflara satmaz, kiralamaz veya pazarlama amacıyla aktarmaz.
+    content: `FikirForum, kişisel verilerinizi üçüncü taraflara satmaz, kiralamaz veya pazarlama amacıyla aktarmaz.
 
 Verileriniz yalnızca şu durumlarda paylaşılabilir:
 
@@ -89,7 +89,7 @@ Bunların dışında hiçbir koşulda verileriniz paylaşılmaz.`,
     content: `Bildirim iznini kabul etmeniz halinde size şu türde bildirimler gönderilebilir:
 
 • Günlük Bilgelik: Her gün yeni bir düşündürücü söz veya hikaye
-• Kervan Pusulası: Günlük görev hatırlatması
+• FikirForum Pusulası: Günlük görev hatırlatması
 • Cuma Mesajı: Haftanın anlamlı mesajı
 • Hap Bilgi: Günün öğrenilmesi gereken bilgisi
 
@@ -110,7 +110,7 @@ Bildirim tercihlerinizi Ayarlar > Tercihler bölümünden dilediğiniz zaman de�
 
 ✦ Taşınabilirlik Hakkı: Verilerinizin yapılandırılmış bir formatta tarafınıza iletilmesini talep edebilirsiniz.
 
-Bu haklarınızı kullanmak için kervanapp@gmail.com adresine yazabilirsiniz.`,
+Bu haklarınızı kullanmak için fikirforumapp@gmail.com adresine yazabilirsiniz.`,
   },
   {
     icon: 'time-outline' as const,
@@ -133,7 +133,7 @@ Uygulamayı kullanmaya devam etmeniz, güncel politikayı kabul ettiğiniz anlam
     title: '9. İletişim ve Başvuru',
     content: `Gizlilik Politikamıza ilişkin sorularınız, talepleriniz veya şikayetleriniz için:
 
-📧 kervanapp@gmail.com
+📧 fikirforumapp@gmail.com
 
 Tarafımıza iletilen başvurular en geç 15 iş günü içinde yanıtlanacaktır. Resmi başvurularınızı yazılı olarak iletmenizi öneririz.`,
   },
@@ -161,7 +161,7 @@ export default function PrivacyScreen() {
           <Ionicons name="shield-checkmark" size={32} color={'#22C55E'} />
           <Text style={styles.introTitle}>Gizliliğinize Önem Veriyoruz</Text>
           <Text style={styles.introSubtitle}>
-            Kervan olarak verilerinizi korumak en temel önceliğimizdir. Bu politika; hangi bilgileri neden topladığımızı, nasıl kullandığımızı ve haklarınızı açıkça ortaya koymaktadır.
+            FikirForum olarak verilerinizi korumak en temel önceliğimizdir. Bu politika; hangi bilgileri neden topladığımızı, nasıl kullandığımızı ve haklarınızı açıkça ortaya koymaktadır.
           </Text>
           <View style={styles.updateBadge}>
             <Ionicons name="time-outline" size={13} color={themeColors.textSecondary} />
@@ -173,7 +173,7 @@ export default function PrivacyScreen() {
         <View style={styles.highlightBox}>
           <Ionicons name="checkmark-circle" size={18} color={'#22C55E'} />
           <Text style={styles.highlightText}>
-            Kervan, kişisel verilerinizi hiçbir koşulda üçüncü taraflara satmaz veya ticari amaçla kullanmaz.
+            FikirForum, kişisel verilerinizi hiçbir koşulda üçüncü taraflara satmaz veya ticari amaçla kullanmaz.
           </Text>
         </View>
 

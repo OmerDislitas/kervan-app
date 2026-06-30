@@ -49,7 +49,7 @@ export const BADGES: Badge[] = [
   {
     id: 'event_starter',
     title: 'İlk Adım',
-    description: 'Gerçek dünyada Kervan ile ilk buluşman gerçekleşti.',
+    description: 'Gerçek dünyada FikirForum ile ilk buluşman gerçekleşti.',
     icon: 'calendar',
     colors: ['#8E2DE2', '#4A00E0'],
     conditionDesc: 'En az 1 etkinliğe katıl',
@@ -57,8 +57,8 @@ export const BADGES: Badge[] = [
   },
   {
     id: 'event_ambassador',
-    title: 'Kervan Elçisi',
-    description: 'Etkinliklerin aranan yüzü, Kervan ruhunu yaşatıyorsun.',
+    title: 'FikirForum Elçisi',
+    description: 'Etkinliklerin aranan yüzü, FikirForum ruhunu yaşatıyorsun.',
     icon: 'compass',
     colors: ['#FF416C', '#FF4B2B'],
     conditionDesc: 'En az 5 etkinliğe katıl',
@@ -85,7 +85,7 @@ export const BADGES: Badge[] = [
   {
     id: 'phenomenon',
     title: 'Fenomen',
-    description: 'Artık Kervan topluluğunun en çok bilinen yüzlerinden birisin.',
+    description: 'Artık FikirForum topluluğunun en çok bilinen yüzlerinden birisin.',
     icon: 'star',
     colors: ['#FF0099', '#493240'],
     conditionDesc: 'En az 100 takipçiye ulaş',
@@ -94,15 +94,15 @@ export const BADGES: Badge[] = [
   {
     id: 'veteran',
     title: 'Kıdemli Gezgin',
-    description: 'Kervan\'ı dolu dolu kullanan, tecrübeli elit bir üye.',
+    description: 'FikirForum\'ı dolu dolu kullanan, tecrübeli elit bir üye.',
     icon: 'medal',
     colors: ['#D4AF37', '#FFDF00'], // Gold gradient
     conditionDesc: 'En az 500 puan topla',
     isEarned: (stats) => stats.points >= 500,
   },
   {
-    id: 'kervan_guide',
-    title: 'Kervan Rehberi',
+    id: 'fikirforum_guide',
+    title: 'FikirForum Rehberi',
     description: 'Uygulamanın efsanelerinden! Senin rehberliğine ihtiyacımız var.',
     icon: 'diamond',
     colors: ['#434343', '#000000'], // Obsidian premium gradient

@@ -1,6 +1,6 @@
 import { useSettingsStore } from '@/stores/settingsStore';
 
-// Kervan Renk Paleti & Tema (Karanlık - Varsayılan)
+// FikirForum Renk Paleti & Tema (Karanlık - Varsayılan)
 export const Colors = {
   // Ana renkler
   primary: '#E8A838',       // Altın/amber — marka rengi

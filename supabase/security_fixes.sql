@@ -1,5 +1,5 @@
 -- ============================================================
--- KERVAN — GÜVENLİK DÜZELTMELERİ (security_fixes.sql)
+-- FIKIRFORUM — GÜVENLİK DÜZELTMELERİ (security_fixes.sql)
 -- ------------------------------------------------------------
 -- Supabase Dashboard > SQL Editor'de SIRAYLA çalıştırın.
 -- Bu dosya idempotsenttir (birden fazla kez çalıştırılabilir).

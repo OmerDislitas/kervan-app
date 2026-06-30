@@ -188,7 +188,7 @@ export default function UserProfileScreen() {
       await queryClient.cancelQueries({ queryKey: ['profile-stats', id] });
 
       // Save last follow time for compass task verification
-      AsyncStorage.setItem('@kervan_last_follow', Date.now().toString()).catch(() => {});
+      AsyncStorage.setItem('@fikirforum_last_follow', Date.now().toString()).catch(() => {});
 
       const previousRecord = queryClient.getQueryData(['follow-status', currentProfile?.id, id]);
       const previousStats = queryClient.getQueryData(['profile-stats', id]);

@@ -50,10 +50,10 @@ export const CompassCard = React.memo(function CompassCard() {
 
   const loadTask = React.useCallback(async () => {
     try {
-      const savedTaskStr = await AsyncStorage.getItem('@kervan_compass_task');
-      const timestampStr = await AsyncStorage.getItem('@kervan_compass_time');
-      const completedStr = await AsyncStorage.getItem('@kervan_compass_completed');
-      const earnedStr = await AsyncStorage.getItem('@kervan_compass_points_earned');
+      const savedTaskStr = await AsyncStorage.getItem('@fikirforum_compass_task');
+      const timestampStr = await AsyncStorage.getItem('@fikirforum_compass_time');
+      const completedStr = await AsyncStorage.getItem('@fikirforum_compass_completed');
+      const earnedStr = await AsyncStorage.getItem('@fikirforum_compass_points_earned');
 
       if (savedTaskStr && timestampStr) {
         const timestamp = parseInt(timestampStr, 10);
@@ -70,10 +70,10 @@ export const CompassCard = React.memo(function CompassCard() {
           setCooldown(`${rH}s ${rM}d`);
         } else {
           await AsyncStorage.multiRemove([
-            '@kervan_compass_task',
-            '@kervan_compass_time',
-            '@kervan_compass_completed',
-            '@kervan_compass_points_earned',
+            '@fikirforum_compass_task',
+            '@fikirforum_compass_time',
+            '@fikirforum_compass_completed',
+            '@fikirforum_compass_points_earned',
           ]);
           setTask(null);
           setTaskCompleted(false);
@@ -116,11 +116,11 @@ export const CompassCard = React.memo(function CompassCard() {
       setTask(newTask);
       setIsSpinning(false);
       setTaskCompleted(false);
-      await AsyncStorage.setItem('@kervan_compass_task', JSON.stringify(newTask));
-      await AsyncStorage.setItem('@kervan_compass_time', Date.now().toString());
-      await AsyncStorage.setItem('@kervan_compass_completed', 'false');
-      await AsyncStorage.setItem('@kervan_compass_points_earned', 'false');
-      await AsyncStorage.setItem('@kervan_compass_start_points', (profile?.points || 0).toString());
+      await AsyncStorage.setItem('@fikirforum_compass_task', JSON.stringify(newTask));
+      await AsyncStorage.setItem('@fikirforum_compass_time', Date.now().toString());
+      await AsyncStorage.setItem('@fikirforum_compass_completed', 'false');
+      await AsyncStorage.setItem('@fikirforum_compass_points_earned', 'false');
+      await AsyncStorage.setItem('@fikirforum_compass_start_points', (profile?.points || 0).toString());
       loadTask();
     });
   };
@@ -158,7 +158,7 @@ export const CompassCard = React.memo(function CompassCard() {
       switch (task.id) {
         case 'h1':
         case 'h7': {
-          const lastCommentTimeStr = await AsyncStorage.getItem('@kervan_last_comment_time');
+          const lastCommentTimeStr = await AsyncStorage.getItem('@fikirforum_last_comment_time');
           verified = lastCommentTimeStr ? parseInt(lastCommentTimeStr, 10) >= thresholdTime : false;
           if (!verified && profile?.id) {
             const table = task.id === 'h7' ? 'question_comments' : 'question_comments';
@@ -182,7 +182,7 @@ export const CompassCard = React.memo(function CompassCard() {
         }
         case 'h2':
         case 'h8': {
-          const lastFactReadStr = await AsyncStorage.getItem('@kervan_last_fact_read');
+          const lastFactReadStr = await AsyncStorage.getItem('@fikirforum_last_fact_read');
           verified = lastFactReadStr ? parseInt(lastFactReadStr, 10) >= thresholdTime : false;
           if (!verified) {
             Alert.alert('Görevin Tamamlanmadı 🧭', 'Bugünün hap bilgilerinden en az birini okumalısın.', [
@@ -194,7 +194,7 @@ export const CompassCard = React.memo(function CompassCard() {
           break;
         }
         case 'h3': {
-          const lastLikeTimeStr = await AsyncStorage.getItem('@kervan_last_like_time');
+          const lastLikeTimeStr = await AsyncStorage.getItem('@fikirforum_last_like_time');
           verified = lastLikeTimeStr ? parseInt(lastLikeTimeStr, 10) >= thresholdTime : false;
           if (!verified && profile?.id) {
             const { data } = await supabase
@@ -215,7 +215,7 @@ export const CompassCard = React.memo(function CompassCard() {
           break;
         }
         case 'h4': {
-          const lastProfileViewStr = await AsyncStorage.getItem('@kervan_last_profile_view');
+          const lastProfileViewStr = await AsyncStorage.getItem('@fikirforum_last_profile_view');
           verified = lastProfileViewStr ? parseInt(lastProfileViewStr, 10) >= thresholdTime : false;
           if (!verified) {
             Alert.alert('Görevin Tamamlanmadı 🧭', 'Profiline gidip rozetlerini ve istatistiklerini kontrol etmelisin.', [
@@ -227,7 +227,7 @@ export const CompassCard = React.memo(function CompassCard() {
           break;
         }
         case 'h5': {
-          const lastQuoteReadStr = await AsyncStorage.getItem('@kervan_last_quote_read');
+          const lastQuoteReadStr = await AsyncStorage.getItem('@fikirforum_last_quote_read');
           verified = lastQuoteReadStr ? parseInt(lastQuoteReadStr, 10) >= thresholdTime : false;
           if (!verified) {
             Alert.alert('Görevin Tamamlanmadı 🧭', 'Keşfet ekranındaki "Günün Sözü" hikayesini açıp okumalısın.', [
@@ -239,7 +239,7 @@ export const CompassCard = React.memo(function CompassCard() {
           break;
         }
         case 'h6': {
-          const lastFollowStr = await AsyncStorage.getItem('@kervan_last_follow');
+          const lastFollowStr = await AsyncStorage.getItem('@fikirforum_last_follow');
           verified = lastFollowStr ? parseInt(lastFollowStr, 10) >= thresholdTime : false;
           if (!verified && profile?.id) {
             const { data } = await supabase
@@ -268,8 +268,8 @@ export const CompassCard = React.memo(function CompassCard() {
 
     setTaskCompleted(true);
     setEarnedPoints(true);
-    await AsyncStorage.setItem('@kervan_compass_completed', 'true');
-    await AsyncStorage.setItem('@kervan_compass_points_earned', 'true');
+    await AsyncStorage.setItem('@fikirforum_compass_completed', 'true');
+    await AsyncStorage.setItem('@fikirforum_compass_points_earned', 'true');
     loadTask();
 
     if (profile?.id) {

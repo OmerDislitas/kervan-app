@@ -21,10 +21,10 @@ export const FridayCard = React.memo(function FridayCard() {
           <Ionicons name="moon" size={20} color={themeColors.primary} opacity={0.6} />
         </View>
         <Text style={styles.message}>
-          "Hayırlı Cumalar! Bu mübarek günde kalbinizden huzur, dilinizden dua eksik olmasın. Kervan yolculuğumuzda hep birlikte nice güzel günlere."
+          "Hayırlı Cumalar! Bu mübarek günde kalbinizden huzur, dilinizden dua eksik olmasın. FikirForum yolculuğumuzda hep birlikte nice güzel günlere."
         </Text>
         <View style={styles.footer}>
-          <Text style={styles.signature}>— Kervan Ailesi</Text>
+          <Text style={styles.signature}>— FikirForum Ailesi</Text>
         </View>
       </View>
     </View>
