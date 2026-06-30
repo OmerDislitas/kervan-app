@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Linking,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -316,6 +317,30 @@ export default function EventDetailScreen() {
             <Text style={styles.descriptionText}>{event.description}</Text>
           </View>
         )}
+
+        {/* Bağlantı Linkleri */}
+        {Array.isArray(event.links) && event.links.length > 0 && (
+          <View style={styles.linksSection}>
+            <Text style={styles.linksSectionTitle}>Bağlantılar</Text>
+            {event.links.map((link: { label: string; url: string }, idx: number) => (
+              <TouchableOpacity
+                key={idx}
+                style={styles.linkCard}
+                onPress={() => Linking.openURL(link.url).catch(() => Alert.alert('Hata', 'Link açılamadı.'))}
+                activeOpacity={0.75}
+              >
+                <View style={[styles.linkIconWrap, { backgroundColor: categoryColor + '22' }]}>
+                  <Ionicons name="link-outline" size={18} color={categoryColor} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.linkCardLabel}>{link.label}</Text>
+                  <Text style={styles.linkCardUrl} numberOfLines={1}>{link.url}</Text>
+                </View>
+                <Ionicons name="open-outline" size={16} color={themeColors.textSecondary} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </ScrollView>
 
       {/* Alt Buton */}
@@ -419,9 +444,16 @@ const createStyles = (themeColors: any) => StyleSheet.create({
   infoContent: { flex: 1 },
   infoLabel: { fontSize: Typography.fontSize.xs, color: themeColors.textSecondary, marginBottom: 2, fontWeight: '500' },
   infoValue: { fontSize: Typography.fontSize.md, color: themeColors.textPrimary, fontWeight: '600' },
-  descriptionSection: { backgroundColor: themeColors.surface, borderRadius: BorderRadius.lg, padding: Spacing.md, borderWidth: 1, borderColor: themeColors.border, position: 'relative', zIndex: 2 },
+  descriptionSection: { backgroundColor: themeColors.surface, borderRadius: BorderRadius.lg, padding: Spacing.md, borderWidth: 1, borderColor: themeColors.border, position: 'relative', zIndex: 2, marginBottom: Spacing.md },
   descriptionTitle: { fontSize: Typography.fontSize.lg, fontWeight: '700', color: themeColors.textPrimary, marginBottom: Spacing.sm },
   descriptionText: { fontSize: Typography.fontSize.md, color: themeColors.textSecondary, lineHeight: 24 },
+  // Links section
+  linksSection: { backgroundColor: themeColors.surface, borderRadius: BorderRadius.lg, padding: Spacing.md, borderWidth: 1, borderColor: themeColors.border, position: 'relative', zIndex: 2, marginBottom: Spacing.md, gap: Spacing.sm },
+  linksSectionTitle: { fontSize: Typography.fontSize.lg, fontWeight: '700', color: themeColors.textPrimary, marginBottom: Spacing.xs },
+  linkCard: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: themeColors.surfaceLight ?? themeColors.background, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: themeColors.border, padding: Spacing.sm },
+  linkIconWrap: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  linkCardLabel: { fontSize: Typography.fontSize.sm, fontWeight: '700', color: themeColors.textPrimary },
+  linkCardUrl: { fontSize: Typography.fontSize.xs, color: themeColors.textSecondary, marginTop: 2 },
   bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, padding: Spacing.lg, backgroundColor: themeColors.background, borderTopWidth: 1, borderTopColor: themeColors.border, zIndex: 10 },
   actionButton: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: Spacing.sm, height: 54, borderRadius: BorderRadius.md },
   joinButton: { shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 6 },

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   ScrollView, KeyboardAvoidingView, Platform, Alert,
-  ActivityIndicator, Modal, Switch,
+  ActivityIndicator, Modal, Switch, Linking,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -14,12 +14,19 @@ import { DAYS_OF_WEEK, EVENT_CATEGORIES } from '@/constants/data';
 import DatePickerModal from '@/components/DatePickerModal';
 import TimePickerModal from '@/components/TimePickerModal';
 
+type EventLink = {
+  label: string;
+  url: string;
+};
+
 export default function EditEventScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const queryClient = useQueryClient();
 
   const [form, setForm] = useState<any>(null);
+  const [newLinkLabel, setNewLinkLabel] = useState('');
+  const [newLinkUrl, setNewLinkUrl] = useState('');
   const [showDayModal, setShowDayModal] = useState(false);
   const [showGenderModal, setShowGenderModal] = useState(false);
   const [showDatePicker, setShowDatePicker] = useState(false);
@@ -72,6 +79,7 @@ export default function EditEventScreen() {
         isPublished: event.is_published,
         category: event.category ?? 'other',
         organizationId: event.organization_id ?? '',
+        links: Array.isArray(event.links) ? event.links : [],
       });
     }
   }, [event]);
@@ -110,6 +118,7 @@ export default function EditEventScreen() {
         is_published: form.isPublished,
         category: form.category,
         organization_id: form.organizationId,
+        links: form.links ?? [],
       }).eq('id', id);
 
       if (error) throw error;
@@ -290,6 +299,72 @@ export default function EditEventScreen() {
             </View>
           </View>
 
+          {/* Bağlantı Linkleri */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Bağlantı Linkleri (Opsiyonel)</Text>
+            <Text style={styles.labelSub}>Harita, kayıt formu, burs başvurusu vb. linkler ekleyin</Text>
+
+            {(form.links ?? []).map((link: EventLink, idx: number) => (
+              <View key={idx} style={styles.linkItem}>
+                <Ionicons name="link-outline" size={16} color={Colors.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.linkLabel}>{link.label}</Text>
+                  <Text style={styles.linkUrl} numberOfLines={1}>{link.url}</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => update('links', (form.links ?? []).filter((_: any, i: number) => i !== idx))}
+                  style={styles.linkRemoveBtn}
+                >
+                  <Ionicons name="close-circle" size={20} color="#ef4444" />
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            <View style={styles.linkAddContainer}>
+              <View style={[styles.inputWrapper, { marginBottom: 8 }]}>
+                <Ionicons name="pricetag-outline" size={15} color={Colors.textSecondary} style={{ marginRight: 6 }} />
+                <TextInput
+                  style={[styles.input, { minHeight: 44 }]}
+                  placeholder="Başlık (ör: Harita, Kayıt)"
+                  placeholderTextColor={Colors.textMuted}
+                  value={newLinkLabel}
+                  onChangeText={setNewLinkLabel}
+                />
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={[styles.inputWrapper, { flex: 1 }]}>
+                  <Ionicons name="globe-outline" size={15} color={Colors.textSecondary} style={{ marginRight: 6 }} />
+                  <TextInput
+                    style={[styles.input, { minHeight: 44 }]}
+                    placeholder="https://..."
+                    placeholderTextColor={Colors.textMuted}
+                    value={newLinkUrl}
+                    onChangeText={setNewLinkUrl}
+                    keyboardType="url"
+                    autoCapitalize="none"
+                  />
+                </View>
+                <TouchableOpacity
+                  style={styles.linkAddBtn}
+                  onPress={() => {
+                    const label = newLinkLabel.trim();
+                    const url = newLinkUrl.trim();
+                    if (!label || !url) {
+                      Alert.alert('Eksik', 'Başlık ve URL giriniz.');
+                      return;
+                    }
+                    const finalUrl = url.startsWith('http') ? url : `https://${url}`;
+                    update('links', [...(form.links ?? []), { label, url: finalUrl }]);
+                    setNewLinkLabel('');
+                    setNewLinkUrl('');
+                  }}
+                >
+                  <Ionicons name="add" size={22} color={Colors.background} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
           <View style={styles.switchRow}>
             <View>
               <Text style={styles.label}>Yayında</Text>
@@ -454,7 +529,7 @@ const styles = StyleSheet.create({
   headerTitle: { fontSize: Typography.fontSize.xl, fontWeight: '800', color: Colors.textPrimary },
   inputGroup: { marginBottom: Spacing.md },
   label: { fontSize: Typography.fontSize.sm, color: Colors.textSecondary, marginBottom: Spacing.xs, fontWeight: '600' },
-  labelSub: { fontSize: Typography.fontSize.xs, color: Colors.textMuted, marginTop: 2 },
+  labelSub: { fontSize: Typography.fontSize.xs, color: Colors.textMuted, marginTop: 2, marginBottom: Spacing.sm },
   inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: Spacing.md },
   input: { flex: 1, minHeight: 50, color: Colors.textPrimary, fontSize: Typography.fontSize.md },
   selectButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.border, paddingHorizontal: Spacing.md, height: 50 },
@@ -469,4 +544,11 @@ const styles = StyleSheet.create({
   modalItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: Colors.border },
   modalItemSelected: { backgroundColor: Colors.surfaceLight, borderRadius: BorderRadius.sm, paddingHorizontal: Spacing.sm },
   modalItemText: { flex: 1, fontSize: Typography.fontSize.md, color: Colors.textPrimary },
+  // Link styles
+  linkItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: Colors.surfaceLight ?? Colors.surface, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: Colors.primary + '40', padding: Spacing.sm, marginBottom: Spacing.xs },
+  linkLabel: { fontSize: Typography.fontSize.sm, fontWeight: '700', color: Colors.textPrimary },
+  linkUrl: { fontSize: Typography.fontSize.xs, color: Colors.textSecondary, marginTop: 2 },
+  linkRemoveBtn: { padding: 4 },
+  linkAddContainer: { marginTop: Spacing.sm },
+  linkAddBtn: { width: 44, height: 44, borderRadius: BorderRadius.md, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
 });

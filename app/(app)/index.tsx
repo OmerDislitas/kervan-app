@@ -21,7 +21,7 @@ import { HomeHero } from './_components/HomeHero';
 import { QuestionOfTheWeek } from './_components/QuestionOfTheWeek';
 import { CompassCard } from './_components/CompassCard';
 import { FridayCard } from './_components/FridayCard';
-import { HomeWisdomCard } from './_components/HomeWisdomCard';
+
 import { UpcomingEventsSection } from './_components/UpcomingEventsSection';
 import { NextEventSection } from './_components/NextEventSection';
 import { RankingModal } from './_components/RankingModal';
@@ -240,8 +240,6 @@ export default function HomeScreen() {
         <CompassCard />
 
         <FridayCard />
-
-        <HomeWisdomCard />
 
         <UpcomingEventsSection
           events={upcomingEvents}

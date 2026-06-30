@@ -15,6 +15,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useThemeColors, Spacing } from '@/constants/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Android LayoutAnimation desteği
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -69,7 +70,14 @@ const FactCard = React.memo(function FactCard({
       create: { type: 'easeInEaseOut', property: 'opacity' },
       update: { type: 'spring', springDamping: 0.8 },
     });
-    setExpanded(prev => !prev);
+    setExpanded(prev => {
+      const nextVal = !prev;
+      if (nextVal) {
+        // Kart açıldıysa okundu olarak işaretlemek için timestamp kaydet
+        AsyncStorage.setItem('@kervan_last_fact_read', Date.now().toString()).catch(() => {});
+      }
+      return nextVal;
+    });
   }, []);
 
   const handleOkudum = useCallback(() => {
@@ -78,6 +86,7 @@ const FactCard = React.memo(function FactCard({
       Animated.timing(btnScale, { toValue: 0.93, duration: 80, useNativeDriver: true }),
       Animated.spring(btnScale, { toValue: 1, useNativeDriver: true, tension: 300, friction: 15 }),
     ]).start();
+    AsyncStorage.setItem('@kervan_last_fact_read', Date.now().toString()).catch(() => {});
     onOkudum(item);
   }, [expanded, item, onOkudum, btnScale]);
 

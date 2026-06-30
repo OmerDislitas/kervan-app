@@ -15,6 +15,11 @@ import { DAYS_OF_WEEK, EVENT_CATEGORIES } from '@/constants/data';
 import DatePickerModal from '@/components/DatePickerModal';
 import TimePickerModal from '@/components/TimePickerModal';
 
+type EventLink = {
+  label: string;
+  url: string;
+};
+
 type EventForm = {
   title: string;
   description: string;
@@ -29,6 +34,7 @@ type EventForm = {
   isPublished: boolean;
   category: string;
   organizationId: string;
+  links: EventLink[];
 };
 
 import { useQuery } from '@tanstack/react-query';
@@ -54,7 +60,11 @@ export default function CreateEventScreen() {
     isPublished: true,
     category: 'other',
     organizationId: '',
+    links: [],
   });
+
+  const [newLinkLabel, setNewLinkLabel] = useState('');
+  const [newLinkUrl, setNewLinkUrl] = useState('');
 
   const [showDayModal, setShowDayModal] = useState(false);
   const [showGenderModal, setShowGenderModal] = useState(false);
@@ -112,6 +122,7 @@ export default function CreateEventScreen() {
         is_published: form.isPublished,
         category: form.category,
         organization_id: form.organizationId,
+        links: form.links,
       };
 
       const { data, error } = await supabase.from('events').insert(payload).select().single();
@@ -341,6 +352,74 @@ export default function CreateEventScreen() {
             </View>
           </View>
 
+          {/* Linkler */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Bağlantı Linkleri (Opsiyonel)</Text>
+            <Text style={styles.labelSub}>Harita, kayıt formu, burs başvurusu vb. linkler ekleyin</Text>
+
+            {/* Mevcut linkler */}
+            {form.links.map((link, idx) => (
+              <View key={idx} style={styles.linkItem}>
+                <Ionicons name="link-outline" size={16} color={themeColors.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.linkLabel}>{link.label}</Text>
+                  <Text style={styles.linkUrl} numberOfLines={1}>{link.url}</Text>
+                </View>
+                <TouchableOpacity
+                  onPress={() => update('links', form.links.filter((_, i) => i !== idx))}
+                  style={styles.linkRemoveBtn}
+                >
+                  <Ionicons name="close-circle" size={20} color={themeColors.error ?? '#ef4444'} />
+                </TouchableOpacity>
+              </View>
+            ))}
+
+            {/* Yeni link ekleme */}
+            <View style={styles.linkAddContainer}>
+              <View style={[styles.inputWrapper, { flex: 1, marginRight: 0, marginBottom: 8 }]}>
+                <Ionicons name="pricetag-outline" size={15} color={themeColors.textSecondary} style={{ marginRight: 6 }} />
+                <TextInput
+                  style={[styles.input, { minHeight: 44 }]}
+                  placeholder="Başlık (ör: Harita, Kayıt)"
+                  placeholderTextColor={themeColors.textMuted}
+                  value={newLinkLabel}
+                  onChangeText={setNewLinkLabel}
+                />
+              </View>
+              <View style={{ flexDirection: 'row', gap: 8 }}>
+                <View style={[styles.inputWrapper, { flex: 1 }]}>
+                  <Ionicons name="globe-outline" size={15} color={themeColors.textSecondary} style={{ marginRight: 6 }} />
+                  <TextInput
+                    style={[styles.input, { minHeight: 44 }]}
+                    placeholder="https://..."
+                    placeholderTextColor={themeColors.textMuted}
+                    value={newLinkUrl}
+                    onChangeText={setNewLinkUrl}
+                    keyboardType="url"
+                    autoCapitalize="none"
+                  />
+                </View>
+                <TouchableOpacity
+                  style={styles.linkAddBtn}
+                  onPress={() => {
+                    const label = newLinkLabel.trim();
+                    const url = newLinkUrl.trim();
+                    if (!label || !url) {
+                      Alert.alert('Eksik', 'Başlık ve URL giriniz.');
+                      return;
+                    }
+                    const finalUrl = url.startsWith('http') ? url : `https://${url}`;
+                    update('links', [...form.links, { label, url: finalUrl }]);
+                    setNewLinkLabel('');
+                    setNewLinkUrl('');
+                  }}
+                >
+                  <Ionicons name="add" size={22} color={themeColors.background} />
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+
           {/* Yayınla toggle */}
           <View style={styles.switchRow}>
             <View>
@@ -536,7 +615,7 @@ const createStyles = (themeColors: any) => StyleSheet.create({
   headerTitle: { fontSize: Typography.fontSize.xl, fontWeight: '800', color: themeColors.textPrimary },
   inputGroup: { marginBottom: Spacing.md },
   label: { fontSize: Typography.fontSize.sm, color: themeColors.textSecondary, marginBottom: Spacing.xs, fontWeight: '600' },
-  labelSub: { fontSize: Typography.fontSize.xs, color: themeColors.textMuted, marginTop: 2 },
+  labelSub: { fontSize: Typography.fontSize.xs, color: themeColors.textMuted, marginTop: 2, marginBottom: Spacing.sm },
   inputWrapper: { flexDirection: 'row', alignItems: 'center', backgroundColor: themeColors.surface, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: themeColors.border, paddingHorizontal: Spacing.md },
   input: { flex: 1, minHeight: 50, color: themeColors.textPrimary, fontSize: Typography.fontSize.md },
   selectButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: themeColors.surface, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: themeColors.border, paddingHorizontal: Spacing.md, height: 50 },
@@ -551,4 +630,11 @@ const createStyles = (themeColors: any) => StyleSheet.create({
   modalItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: themeColors.border },
   modalItemSelected: { backgroundColor: themeColors.surfaceLight, borderRadius: BorderRadius.sm, paddingHorizontal: Spacing.sm },
   modalItemText: { flex: 1, fontSize: Typography.fontSize.md, color: themeColors.textPrimary },
+  // Link styles
+  linkItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm, backgroundColor: themeColors.surfaceLight ?? themeColors.surface, borderRadius: BorderRadius.md, borderWidth: 1, borderColor: themeColors.primary + '40', padding: Spacing.sm, marginBottom: Spacing.xs },
+  linkLabel: { fontSize: Typography.fontSize.sm, fontWeight: '700', color: themeColors.textPrimary },
+  linkUrl: { fontSize: Typography.fontSize.xs, color: themeColors.textSecondary, marginTop: 2 },
+  linkRemoveBtn: { padding: 4 },
+  linkAddContainer: { marginTop: Spacing.sm },
+  linkAddBtn: { width: 44, height: 44, borderRadius: BorderRadius.md, backgroundColor: themeColors.primary, alignItems: 'center', justifyContent: 'center' },
 });

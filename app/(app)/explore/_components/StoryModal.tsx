@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Spacing, BorderRadius } from '@/constants/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 const STORY_DURATION = 15000;
@@ -103,7 +104,18 @@ const StoryModal = React.memo(function StoryModal({
   };
 
   useEffect(() => {
-    if (activeStoryGroup) startProgress();
+    if (activeStoryGroup) {
+      startProgress();
+      
+      const slide = activeStoryGroup.slides[currentSlideIndex];
+      if (slide) {
+        if (slide.type === 'hap_bilgi') {
+          AsyncStorage.setItem('@kervan_last_fact_read', Date.now().toString()).catch(() => {});
+        } else if (slide.type === 'daily_quote') {
+          AsyncStorage.setItem('@kervan_last_quote_read', Date.now().toString()).catch(() => {});
+        }
+      }
+    }
     else { progressAnim.setValue(0); }
   }, [activeStoryGroup, currentSlideIndex]);
 

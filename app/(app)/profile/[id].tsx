@@ -17,7 +17,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { sendPushNotification } from '@/lib/notificationService';
-import { Colors, Typography, Spacing, BorderRadius } from '@/constants/theme';
+import { Colors, Typography, Spacing, BorderRadius, useThemeColors } from '@/constants/theme';
 import { DAYS_OF_WEEK } from '@/constants/data';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BADGES, UserBadgeStats } from '@/constants/badges';
@@ -108,6 +108,8 @@ export default function UserProfileScreen() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [refreshing, setRefreshing] = React.useState(false);
+  const themeColors = useThemeColors();
+  const styles = React.useMemo(() => createStyles(themeColors), [themeColors]);
 
   // Kendi profilini görüntülemeye çalışıyorsa ana profil sayfasına yönlendir.
   // useEffect içinde yapılmazsa render sırasında navigation tetiklenip
@@ -313,7 +315,7 @@ export default function UserProfileScreen() {
   if (isProfileLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <ActivityIndicator size="large" color={Colors.primary} style={{ marginTop: 50 }} />
+        <ActivityIndicator size="large" color={themeColors.primary} style={{ marginTop: 50 }} />
       </SafeAreaView>
     );
   }
@@ -326,13 +328,13 @@ export default function UserProfileScreen() {
         showsVerticalScrollIndicator={false} 
         contentContainerStyle={styles.scrollContent}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[Colors.primary]} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[themeColors.primary]} tintColor={themeColors.primary} />
         }
       >
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-            <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
+            <Ionicons name="arrow-back" size={22} color={themeColors.textPrimary} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Profil</Text>
           <View style={{ width: 40 }} />
@@ -341,13 +343,13 @@ export default function UserProfileScreen() {
         {/* Profil Kartı */}
         <View style={styles.profileCard}>
           <LinearGradient
-            colors={[Colors.primary + '15', 'transparent']}
+            colors={[themeColors.primary + '15', 'transparent']}
             style={styles.cardHeaderGradient}
           />
           {/* Avatar */}
           <View style={styles.avatarContainer}>
             <LinearGradient
-              colors={[Colors.primary, Colors.primary + '88', Colors.primary]}
+              colors={[themeColors.primary, themeColors.primary + '88', themeColors.primary]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
               style={styles.avatarOuterRing}
@@ -403,14 +405,14 @@ export default function UserProfileScreen() {
 
             <View style={styles.statsDashboardFooter}>
               <View style={styles.footerStatItem}>
-                <Ionicons name="calendar-outline" size={14} color={Colors.textSecondary} />
+                <Ionicons name="calendar-outline" size={14} color={themeColors.textSecondary} />
                 <Text style={styles.footerStatText}>
                   <Text style={styles.footerStatHighlight}>{userEvents.length}</Text> Etkinlik
                 </Text>
               </View>
               <View style={styles.footerStatDivider} />
               <View style={styles.footerStatItem}>
-                <Ionicons name="chatbubbles-outline" size={14} color={Colors.textSecondary} />
+                <Ionicons name="chatbubbles-outline" size={14} color={themeColors.textSecondary} />
                 <Text style={styles.footerStatText}>
                   <Text style={styles.footerStatHighlight}>{stats?.commentsCount ?? 0}</Text> Yorum
                 </Text>
@@ -430,7 +432,7 @@ export default function UserProfileScreen() {
             <Ionicons 
               name={isFollowing || isPending ? "person-remove" : "person-add"} 
               size={18} 
-              color={isFollowing || isPending ? Colors.primary : "#fff"} 
+              color={isFollowing || isPending ? themeColors.primary : "#fff"} 
             />
             <Text style={[
               styles.followButtonText,
@@ -459,7 +461,7 @@ export default function UserProfileScreen() {
               </ScrollView>
             ) : (
               <View style={styles.noBadgesBox}>
-                <Ionicons name="medal-outline" size={32} color={Colors.textMuted} />
+                <Ionicons name="medal-outline" size={32} color={themeColors.textMuted} />
                 <Text style={styles.noBadgesText}>Henüz rozet kazanılmadı.</Text>
               </View>
             )}
@@ -475,7 +477,7 @@ export default function UserProfileScreen() {
 
         {isPrivate ? (
           <View style={styles.privateState}>
-            <Ionicons name="lock-closed-outline" size={48} color={Colors.textMuted} />
+            <Ionicons name="lock-closed-outline" size={48} color={themeColors.textMuted} />
             <Text style={styles.privateStateText}>Bu kullanıcı hesabını gizledi.</Text>
             <Text style={styles.privateStateSubtext}>Etkinlik geçmişi görüntülenemez.</Text>
           </View>
@@ -483,7 +485,7 @@ export default function UserProfileScreen() {
           <>
             {userEvents.length === 0 && !isEventsLoading && (
               <View style={styles.emptyState}>
-                <Ionicons name="calendar-clear-outline" size={48} color={Colors.textMuted} />
+                <Ionicons name="calendar-clear-outline" size={48} color={themeColors.textMuted} />
                 <Text style={styles.emptyStateText}>Henüz kayıtlı olduğu bir etkinlik yok.</Text>
               </View>
             )}
@@ -507,14 +509,14 @@ export default function UserProfileScreen() {
                     <Ionicons
                       name={ev.is_recurring ? 'repeat' : 'calendar'}
                       size={18}
-                      color={Colors.primary}
+                      color={themeColors.primary}
                     />
                   </View>
                   <View style={styles.eventItemContent}>
                     <Text style={styles.eventItemTitle} numberOfLines={1}>{ev.title}</Text>
                     <Text style={styles.eventItemDate}>{dateStr}</Text>
                   </View>
-                  <Ionicons name="chevron-forward" size={16} color={Colors.textMuted} />
+                  <Ionicons name="chevron-forward" size={16} color={themeColors.textMuted} />
                 </TouchableOpacity>
               );
             })}
@@ -525,49 +527,49 @@ export default function UserProfileScreen() {
   );
 }
 
-function InfoChip({ icon, label, color }: { icon?: string; label: string; color?: string }) {
+function InfoChip({ icon, label, color, themeColors }: { icon?: string; label: string; color?: string; themeColors: any }) {
   return (
-    <View style={chipStyles.container}>
-      {icon && <Ionicons name={icon as any} size={13} color={color ?? Colors.textSecondary} />}
-      <Text style={[chipStyles.text, color && { color }]} numberOfLines={1}>{label}</Text>
+    <View style={[chipStyles(themeColors).container]}>
+      {icon && <Ionicons name={icon as any} size={13} color={color ?? themeColors.textSecondary} />}
+      <Text style={[chipStyles(themeColors).text, color && { color }]} numberOfLines={1}>{label}</Text>
     </View>
   );
 }
 
-const chipStyles = StyleSheet.create({
+const chipStyles = (themeColors: any) => StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: Colors.surfaceLight,
+    backgroundColor: themeColors.surfaceLight,
     borderRadius: BorderRadius.full,
     paddingHorizontal: 10,
     paddingVertical: 5,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: themeColors.border,
   },
   text: {
     fontSize: Typography.fontSize.xs,
-    color: Colors.textSecondary,
+    color: themeColors.textSecondary,
     fontWeight: '500',
     maxWidth: 130,
   },
 });
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: Colors.background },
+const createStyles = (themeColors: any) => StyleSheet.create({
+  container: { flex: 1, backgroundColor: themeColors.background },
   scrollContent: { padding: Spacing.lg, paddingBottom: Spacing.xl },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: Spacing.lg },
-  backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: Colors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
-  headerTitle: { fontSize: Typography.fontSize.lg, fontWeight: '800', color: Colors.textPrimary },
+  backButton: { width: 40, height: 40, borderRadius: 20, backgroundColor: themeColors.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: themeColors.border, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
+  headerTitle: { fontSize: Typography.fontSize.lg, fontWeight: '800', color: themeColors.textPrimary },
   profileCard: { 
-    backgroundColor: Colors.surface, 
+    backgroundColor: themeColors.surface, 
     borderRadius: BorderRadius.xl * 1.25, 
     padding: Spacing.lg + 4, 
     marginBottom: Spacing.lg, 
     alignItems: 'center', 
     borderWidth: 1, 
-    borderColor: Colors.border,
+    borderColor: themeColors.border,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 8 },
@@ -586,7 +588,7 @@ const styles = StyleSheet.create({
   avatarOuterRing: {
     padding: 3,
     borderRadius: 50,
-    shadowColor: Colors.primary,
+    shadowColor: themeColors.primary,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 12,
@@ -596,16 +598,16 @@ const styles = StyleSheet.create({
     width: 86, 
     height: 86, 
     borderRadius: 43, 
-    backgroundColor: Colors.primary, 
+    backgroundColor: themeColors.primary, 
     alignItems: 'center', 
     justifyContent: 'center',
     borderWidth: 3,
-    borderColor: Colors.surface,
+    borderColor: themeColors.surface,
   },
   avatarImage: { width: '100%', height: '100%' },
   avatarText: { fontSize: 30, fontWeight: '900', color: '#FFFFFF', letterSpacing: 1 },
-  profileName: { fontSize: 23, fontWeight: '900', color: Colors.textPrimary, marginBottom: 4, letterSpacing: -0.5 },
-  profileUsername: { fontSize: 14, color: Colors.primary, fontWeight: '700', marginBottom: Spacing.sm, opacity: 0.9, letterSpacing: 0.2 },
+  profileName: { fontSize: 23, fontWeight: '900', color: themeColors.textPrimary, marginBottom: 4, letterSpacing: -0.5 },
+  profileUsername: { fontSize: 14, color: themeColors.primary, fontWeight: '700', marginBottom: Spacing.sm, opacity: 0.9, letterSpacing: 0.2 },
   bioContainer: {
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.sm,
@@ -614,18 +616,17 @@ const styles = StyleSheet.create({
   },
   bioText: {
     fontSize: Typography.fontSize.sm,
-    color: Colors.textSecondary,
+    color: themeColors.textSecondary,
     textAlign: 'center',
     lineHeight: 20,
     fontWeight: '500',
   },
-
   statsDashboard: {
     width: '100%',
-    backgroundColor: Colors.surfaceLight + '50',
+    backgroundColor: themeColors.surfaceLight + '50',
     borderRadius: BorderRadius.xl,
     borderWidth: 1,
-    borderColor: Colors.borderLight,
+    borderColor: themeColors.border,
     overflow: 'hidden',
     marginBottom: Spacing.lg,
   },
@@ -635,7 +636,7 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     paddingHorizontal: Spacing.md,
     borderBottomWidth: 1,
-    borderBottomColor: Colors.borderLight,
+    borderBottomColor: themeColors.border,
   },
   statDashboardItem: {
     flex: 1,
@@ -644,25 +645,25 @@ const styles = StyleSheet.create({
   statDashboardValue: {
     fontSize: 22,
     fontWeight: '900',
-    color: Colors.primary,
+    color: themeColors.primary,
     letterSpacing: -0.5,
   },
   statDashboardLabel: {
     fontSize: 11,
-    color: Colors.textSecondary,
+    color: themeColors.textSecondary,
     fontWeight: '600',
     marginTop: 2,
   },
   statDashboardDivider: {
     width: 1.5,
     height: 32,
-    backgroundColor: Colors.border,
+    backgroundColor: themeColors.border,
     alignSelf: 'center',
     borderRadius: 1,
   },
   statsDashboardFooter: {
     flexDirection: 'row',
-    backgroundColor: Colors.background,
+    backgroundColor: themeColors.background,
     paddingVertical: 10,
     paddingHorizontal: Spacing.lg,
     justifyContent: 'center',
@@ -676,38 +677,38 @@ const styles = StyleSheet.create({
   footerStatDivider: {
     width: 1,
     height: 12,
-    backgroundColor: Colors.border,
+    backgroundColor: themeColors.border,
   },
   footerStatText: {
     fontSize: 12,
-    color: Colors.textSecondary,
+    color: themeColors.textSecondary,
     fontWeight: '600',
   },
   footerStatHighlight: {
-    color: Colors.textPrimary,
+    color: themeColors.textPrimary,
     fontWeight: '800',
   },
   followButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.primary,
+    backgroundColor: themeColors.primary,
     paddingHorizontal: Spacing.xl,
     paddingVertical: 12,
     borderRadius: BorderRadius.full,
     gap: 8,
     marginBottom: Spacing.lg,
     width: '80%',
-    shadowColor: Colors.primary,
+    shadowColor: themeColors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.2,
     shadowRadius: 8,
     elevation: 4,
   },
   followingButton: {
-    backgroundColor: Colors.surface,
+    backgroundColor: themeColors.surface,
     borderWidth: 1.5,
-    borderColor: Colors.primary,
+    borderColor: themeColors.primary,
     shadowOpacity: 0,
     elevation: 0,
   },
@@ -717,44 +718,44 @@ const styles = StyleSheet.create({
     fontSize: 15,
   },
   followingButtonText: {
-    color: Colors.primary,
+    color: themeColors.primary,
   },
   profileInfoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.xs, justifyContent: 'center' },
   section: { flexDirection: 'row', alignItems: 'baseline', gap: Spacing.sm, marginBottom: Spacing.md },
-  sectionTitle: { fontSize: Typography.fontSize.lg, fontWeight: '700', color: Colors.textPrimary },
+  sectionTitle: { fontSize: Typography.fontSize.lg, fontWeight: '700', color: themeColors.textPrimary },
   emptyState: { alignItems: 'center', paddingVertical: Spacing.xl, gap: Spacing.md },
-  emptyStateText: { fontSize: Typography.fontSize.md, color: Colors.textSecondary, textAlign: 'center' },
-  eventItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, backgroundColor: Colors.surface, borderRadius: BorderRadius.md, padding: Spacing.md, marginBottom: Spacing.sm, borderWidth: 1, borderColor: Colors.border },
-  eventItemIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: Colors.primary + '22', alignItems: 'center', justifyContent: 'center' },
+  emptyStateText: { fontSize: Typography.fontSize.md, color: themeColors.textSecondary, textAlign: 'center' },
+  eventItem: { flexDirection: 'row', alignItems: 'center', gap: Spacing.md, backgroundColor: themeColors.surface, borderRadius: BorderRadius.md, padding: Spacing.md, marginBottom: Spacing.sm, borderWidth: 1, borderColor: themeColors.border },
+  eventItemIcon: { width: 36, height: 36, borderRadius: 10, backgroundColor: themeColors.primary + '22', alignItems: 'center', justifyContent: 'center' },
   eventItemContent: { flex: 1 },
-  eventItemTitle: { fontSize: Typography.fontSize.md, fontWeight: '600', color: Colors.textPrimary },
-  eventItemDate: { fontSize: Typography.fontSize.sm, color: Colors.textSecondary, marginTop: 2 },
+  eventItemTitle: { fontSize: Typography.fontSize.md, fontWeight: '600', color: themeColors.textPrimary },
+  eventItemDate: { fontSize: Typography.fontSize.sm, color: themeColors.textSecondary, marginTop: 2 },
   privateState: {
     alignItems: 'center',
     paddingVertical: Spacing['2xl'],
     gap: Spacing.sm,
-    backgroundColor: Colors.surface,
+    backgroundColor: themeColors.surface,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: themeColors.border,
     marginHorizontal: Spacing.xs,
   },
   privateStateText: {
     fontSize: Typography.fontSize.md,
     fontWeight: '700',
-    color: Colors.textPrimary,
+    color: themeColors.textPrimary,
     marginTop: Spacing.sm,
   },
   privateStateSubtext: {
     fontSize: Typography.fontSize.sm,
-    color: Colors.textSecondary,
+    color: themeColors.textSecondary,
   },
   badgesSection: {
     width: '100%',
     marginTop: Spacing.xl,
     paddingTop: Spacing.md,
     borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
+    borderTopColor: themeColors.border,
   },
   badgesHeader: {
     flexDirection: 'row',
@@ -765,7 +766,7 @@ const styles = StyleSheet.create({
   badgesTitle: {
     fontSize: Typography.fontSize.md,
     fontWeight: '800',
-    color: Colors.textPrimary,
+    color: themeColors.textPrimary,
   },
   badgesList: {
     gap: Spacing.md,
@@ -793,23 +794,24 @@ const styles = StyleSheet.create({
   earnedBadgeTitle: {
     fontSize: 9,
     fontWeight: '800',
-    color: Colors.textSecondary,
+    color: themeColors.textSecondary,
     textAlign: 'center',
   },
   noBadgesBox: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: Spacing.md,
-    backgroundColor: Colors.surfaceLight,
+    backgroundColor: themeColors.surfaceLight,
     borderRadius: BorderRadius.lg,
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: themeColors.border,
     borderStyle: 'dashed',
   },
   noBadgesText: {
     fontSize: Typography.fontSize.sm,
     fontWeight: '600',
-    color: Colors.textSecondary,
+    color: themeColors.textSecondary,
     marginTop: 8,
   },
 });
+
