@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Platform,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -23,6 +24,7 @@ import { useSettingsStore } from '@/stores/settingsStore';
 import { DAYS_OF_WEEK } from '@/constants/data';
 import { BADGES, UserBadgeStats } from '@/constants/badges';
 import BadgesModal from '@/components/BadgesModal';
+import { getAvatarSource } from '@/constants/avatars';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import AppScreenHeader from '@/components/AppScreenHeader';
 
@@ -290,7 +292,11 @@ export default function ProfileScreen() {
               style={styles.avatarOuterRing}
             >
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{getInitials(profile?.full_name ?? 'U')}</Text>
+                {profile?.avatar_id ? (
+                  <Image source={getAvatarSource(profile.avatar_id)} style={styles.avatarImage} />
+                ) : (
+                  <Text style={styles.avatarText}>{getInitials(profile?.full_name ?? 'U')}</Text>
+                )}
               </View>
             </LinearGradient>
           </View>
@@ -568,16 +574,18 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  avatar: { 
-    width: 86, 
-    height: 86, 
-    borderRadius: 43, 
-    backgroundColor: themeColors.primary, 
-    alignItems: 'center', 
+  avatar: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    backgroundColor: themeColors.primary,
+    alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
     borderColor: themeColors.surface,
+    overflow: 'hidden',
   },
+  avatarImage: { width: '100%', height: '100%' },
   avatarText: { fontSize: 30, fontWeight: '900', color: '#FFFFFF', letterSpacing: 1 },
   genderDot: { position: 'absolute', bottom: 0, right: 0, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: themeColors.surface },
   profileName: { fontSize: 23, fontWeight: '900', color: themeColors.textPrimary, marginBottom: 4, letterSpacing: -0.5 },

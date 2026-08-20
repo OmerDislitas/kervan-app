@@ -12,19 +12,23 @@ import {
   ActivityIndicator,
   Modal,
   Switch,
+  Image,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useMutation } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LinearGradient } from 'expo-linear-gradient';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore, UserProfile } from '@/stores/authStore';
-import { Colors, Typography, Spacing, BorderRadius, useThemeColors } from '@/constants/theme';
+import { Typography, Spacing, BorderRadius, useThemeColors } from '@/constants/theme';
 import {
   ISTANBUL_UNIVERSITIES,
   DEPARTMENTS,
   UNIVERSITY_YEARS,
 } from '@/constants/data';
+import { AVATARS, getAvatarSource } from '@/constants/avatars';
+import { useUnsavedChangesStore } from '@/stores/unsavedChangesStore';
 
 type EditForm = {
   full_name: string;
@@ -35,6 +39,7 @@ type EditForm = {
   university_year: string;
   is_private: boolean;
   bio: string;
+  avatar_id: number | null;
 };
 
 export default function EditProfileScreen() {
@@ -43,7 +48,7 @@ export default function EditProfileScreen() {
   const router = useRouter();
   const { profile, setProfile } = useAuthStore();
 
-  const [form, setForm] = useState<EditForm>({
+  const initialForm: EditForm = {
     full_name: profile?.full_name ?? '',
     username: profile?.username ?? '',
     phone: profile?.phone ?? '',
@@ -52,16 +57,40 @@ export default function EditProfileScreen() {
     university_year: profile?.university_year ?? '',
     is_private: profile?.is_private ?? false,
     bio: profile?.bio ?? '',
-  });
+    avatar_id: profile?.avatar_id ?? null,
+  };
+
+  const [form, setForm] = useState<EditForm>(initialForm);
+  // İlk yüklemedeki değerlerin sabit anlık görüntüsü — kirli/değişti
+  // kontrolü bu referansa göre yapılır (profile store'u save sonrası
+  // güncellense bile bu değişmez).
+  const initialFormRef = React.useRef<EditForm>(initialForm);
 
   const [showUniversityModal, setShowUniversityModal] = useState(false);
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
   const [showYearModal, setShowYearModal] = useState(false);
+  const [showAvatarModal, setShowAvatarModal] = useState(false);
   const [uniSearch, setUniSearch] = useState('');
   const [deptSearch, setDeptSearch] = useState('');
 
-  const update = (key: keyof EditForm, value: string | boolean) =>
+  const update = (key: keyof EditForm, value: string | boolean | number | null) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  // Kaydedilmemiş değişiklik var mı? Alt tab bar ikonlarına basıldığında
+  // bu ekrandan uyarısız çıkılmasını engellemek için paylaşılan store'a
+  // yazılır — bkz. app/(app)/_layout.tsx tabPress guard'ı.
+  const setHasUnsavedChanges = useUnsavedChangesStore((s) => s.setHasUnsavedChanges);
+  React.useEffect(() => {
+    const dirty = (Object.keys(initialFormRef.current) as (keyof EditForm)[]).some(
+      (key) => form[key] !== initialFormRef.current[key]
+    );
+    setHasUnsavedChanges(dirty);
+  }, [form, setHasUnsavedChanges]);
+
+  // Ekrandan ayrılınca (kaydedilsin ya da vazgeçilsin) bayrağı temizle.
+  React.useEffect(() => {
+    return () => setHasUnsavedChanges(false);
+  }, [setHasUnsavedChanges]);
 
   const filteredUniversities = ISTANBUL_UNIVERSITIES.filter((u) =>
     u.toLowerCase().includes(uniSearch.toLowerCase())
@@ -105,6 +134,7 @@ export default function EditProfileScreen() {
           university_year: form.university_year || null,
           is_private: form.is_private,
           bio: form.bio.trim() || null,
+          avatar_id: form.avatar_id,
         })
         .eq('id', profile!.id);
 
@@ -122,11 +152,14 @@ export default function EditProfileScreen() {
         university_year: form.university_year || null,
         is_private: form.is_private,
         bio: form.bio.trim() || null,
+        avatar_id: form.avatar_id,
       } as UserProfile);
 
-      Alert.alert('Başarılı', 'Profilin güncellendi!', [
-        { text: 'Tamam', onPress: () => router.back() },
-      ]);
+      // Az önce kaydedilen değerleri "başlangıç" kabul et ki kirli/değişti
+      // kontrolü artık false dönsün, sonra sessizce geri dön.
+      initialFormRef.current = { ...form };
+      setHasUnsavedChanges(false);
+      router.back();
     },
     onError: (err: any) => {
       Alert.alert('Hata', err.message ?? 'Profil güncellenemedi.');
@@ -150,27 +183,39 @@ export default function EditProfileScreen() {
             <View style={{ width: 36 }} />
           </View>
 
-          {/* Avatar hint */}
-          <View style={styles.avatarHint}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>
-                {form.full_name
-                  .split(' ')
-                  .map((n) => n[0])
-                  .join('')
-                  .toUpperCase()
-                  .slice(0, 2) || 'U'}
-              </Text>
+          {/* Avatar seçimi */}
+          <View style={styles.avatarSection}>
+            <View style={styles.avatarHint}>
+              <LinearGradient
+                colors={[themeColors.primary, themeColors.primary + '88', themeColors.primary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.avatarOuterRing}
+              >
+                <View style={styles.avatar}>
+                  {form.avatar_id ? (
+                    <Image source={getAvatarSource(form.avatar_id)} style={styles.avatarImage} />
+                  ) : (
+                    <Text style={styles.avatarText}>
+                      {form.full_name
+                        .split(' ')
+                        .map((n) => n[0])
+                        .join('')
+                        .toUpperCase()
+                        .slice(0, 2) || 'U'}
+                    </Text>
+                  )}
+                </View>
+              </LinearGradient>
             </View>
-            <View style={[styles.genderDot, {
-              backgroundColor: profile?.gender === 'male' ? Colors.male : Colors.female
-            }]}>
-              <Ionicons
-                name="person-outline"
-                size={10}
-                color="#fff"
-              />
-            </View>
+            <TouchableOpacity
+              style={styles.avatarPickButton}
+              activeOpacity={0.8}
+              onPress={() => setShowAvatarModal(true)}
+            >
+              <Ionicons name="pencil" size={14} color={themeColors.primary} />
+              <Text style={styles.avatarPickButtonText}>Avatar Seç</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Ad Soyad */}
@@ -464,6 +509,72 @@ export default function EditProfileScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Avatar Seçim Modalı */}
+      <Modal visible={showAvatarModal} transparent animationType="slide">
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Avatar Seç</Text>
+              <TouchableOpacity onPress={() => setShowAvatarModal(false)}>
+                <Ionicons name="close" size={24} color={themeColors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: Spacing.xl }}>
+              <View style={styles.avatarGrid}>
+                <TouchableOpacity
+                  style={styles.avatarGridItem}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    update('avatar_id', null);
+                    setShowAvatarModal(false);
+                  }}
+                >
+                  <View style={[
+                    styles.avatarGridThumb,
+                    styles.avatarGridInitials,
+                    !form.avatar_id && styles.avatarGridThumbSelected,
+                  ]}>
+                    <Text style={styles.avatarGridInitialsText}>
+                      {form.full_name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2) || 'U'}
+                    </Text>
+                  </View>
+                  {!form.avatar_id && (
+                    <View style={styles.avatarGridCheck}>
+                      <Ionicons name="checkmark-circle" size={20} color={themeColors.primary} />
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                {Object.keys(AVATARS).map((key) => {
+                  const id = Number(key);
+                  const selected = form.avatar_id === id;
+                  return (
+                    <TouchableOpacity
+                      key={id}
+                      style={styles.avatarGridItem}
+                      activeOpacity={0.85}
+                      onPress={() => {
+                        update('avatar_id', id);
+                        setShowAvatarModal(false);
+                      }}
+                    >
+                      <View style={[styles.avatarGridThumb, selected && styles.avatarGridThumbSelected]}>
+                        <Image source={AVATARS[id]} style={styles.avatarGridImage} />
+                      </View>
+                      {selected && (
+                        <View style={styles.avatarGridCheck}>
+                          <Ionicons name="checkmark-circle" size={20} color={themeColors.primary} />
+                        </View>
+                      )}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -488,26 +599,49 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     fontWeight: '800',
     color: themeColors.textPrimary,
   },
-  avatarHint: {
-    position: 'relative',
-    alignSelf: 'center',
+  avatarSection: {
+    alignItems: 'center',
     marginBottom: Spacing.xl,
   },
+  avatarHint: {
+    marginBottom: Spacing.md,
+  },
+  avatarPickButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: themeColors.primary + '40',
+    backgroundColor: themeColors.primary + '10',
+  },
+  avatarPickButtonText: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: '700',
+    color: themeColors.primary,
+  },
+  avatarOuterRing: {
+    padding: 3,
+    borderRadius: 40,
+  },
   avatar: {
-    width: 72, height: 72, borderRadius: 36,
+    width: 74, height: 74, borderRadius: 37,
     backgroundColor: themeColors.primary,
     alignItems: 'center', justifyContent: 'center',
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: themeColors.background,
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
   },
   avatarText: {
     fontSize: Typography.fontSize['2xl'],
     fontWeight: '800',
     color: themeColors.background,
-  },
-  genderDot: {
-    position: 'absolute', bottom: 0, right: 0,
-    width: 22, height: 22, borderRadius: 11,
-    alignItems: 'center', justifyContent: 'center',
-    borderWidth: 2, borderColor: themeColors.background,
   },
   inputGroup: { marginBottom: Spacing.md },
   label: {
@@ -635,6 +769,53 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     flex: 1,
     fontSize: Typography.fontSize.md,
     color: themeColors.textPrimary,
+  },
+  avatarGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: Spacing.md,
+    paddingTop: Spacing.sm,
+  },
+  avatarGridItem: {
+    width: '22%',
+    aspectRatio: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarGridThumb: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 999,
+    overflow: 'hidden',
+    backgroundColor: themeColors.background,
+    borderWidth: 2,
+    borderColor: themeColors.border,
+  },
+  avatarGridThumbSelected: {
+    borderColor: themeColors.primary,
+    borderWidth: 3,
+  },
+  avatarGridImage: {
+    width: '100%',
+    height: '100%',
+  },
+  avatarGridInitials: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: themeColors.primary,
+  },
+  avatarGridInitialsText: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: '800',
+    color: themeColors.background,
+  },
+  avatarGridCheck: {
+    position: 'absolute',
+    bottom: -4,
+    right: -4,
+    backgroundColor: themeColors.surface,
+    borderRadius: 12,
   },
   privacyGroup: {
     flexDirection: 'row',

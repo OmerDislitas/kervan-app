@@ -25,6 +25,8 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [emailError, setEmailError] = useState('');
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -64,6 +66,42 @@ export default function LoginScreen() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    if (forgotLoading || loading) return;
+
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail) {
+      setEmailError('Şifrenizi sıfırlamak için önce e-posta adresinizi girin.');
+      return;
+    }
+
+    setEmailError('');
+    setForgotLoading(true);
+
+    try {
+      const { data: exists, error: checkError } = await supabase.rpc('email_exists', {
+        check_email: trimmedEmail,
+      });
+
+      if (checkError) throw checkError;
+
+      if (!exists) {
+        setEmailError('Bu e-posta ile uygulamaya kayıt yapılmamış.');
+        return;
+      }
+
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(trimmedEmail);
+      if (resetError) throw resetError;
+
+      router.push({ pathname: '/(auth)/forgot-password', params: { email: trimmedEmail } });
+    } catch (err: any) {
+      console.error('[Login] forgotPassword exception:', err);
+      setEmailError(err?.message || 'Bir sorun oluştu. Lütfen tekrar deneyin.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.container}
@@ -91,12 +129,12 @@ export default function LoginScreen() {
           <Text style={styles.formTitle}>Giriş Yap</Text>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>E-posta</Text>
-            <View style={styles.inputWrapper}>
+            <Text style={[styles.label, emailError && styles.labelError]}>E-posta</Text>
+            <View style={[styles.inputWrapper, emailError && styles.inputWrapperError]}>
               <Ionicons
                 name="mail-outline"
                 size={18}
-                color={themeColors.textSecondary}
+                color={emailError ? themeColors.error : themeColors.textSecondary}
                 style={styles.inputIcon}
               />
               <TextInput
@@ -104,12 +142,16 @@ export default function LoginScreen() {
                 placeholder="ornek@email.com"
                 placeholderTextColor={themeColors.textMuted}
                 value={email}
-                onChangeText={setEmail}
+                onChangeText={(t) => {
+                  setEmail(t);
+                  if (emailError) setEmailError('');
+                }}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
               />
             </View>
+            {!!emailError && <Text style={styles.errorText}>{emailError}</Text>}
           </View>
 
           <View style={styles.inputGroup}>
@@ -143,18 +185,35 @@ export default function LoginScreen() {
             </View>
           </View>
 
-          <TouchableOpacity
-            style={[styles.loginButton, loading && styles.buttonDisabled]}
-            onPress={handleLogin}
-            disabled={loading}
-            activeOpacity={0.85}
-          >
-            {loading ? (
-              <ActivityIndicator color={themeColors.background} />
-            ) : (
-              <Text style={styles.loginButtonText}>Giriş Yap</Text>
-            )}
-          </TouchableOpacity>
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={[styles.loginButton, styles.loginButtonFlex, loading && styles.buttonDisabled]}
+              onPress={handleLogin}
+              disabled={loading || forgotLoading}
+              activeOpacity={0.85}
+            >
+              {loading ? (
+                <ActivityIndicator color={themeColors.background} />
+              ) : (
+                <Text style={styles.loginButtonText}>Giriş Yap</Text>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.loginButton, styles.forgotButton, styles.loginButtonFlex, forgotLoading && styles.buttonDisabled]}
+              onPress={handleForgotPassword}
+              disabled={loading || forgotLoading}
+              activeOpacity={0.85}
+            >
+              {forgotLoading ? (
+                <ActivityIndicator color={themeColors.primary} />
+              ) : (
+                <Text style={styles.forgotButtonText} numberOfLines={1} adjustsFontSizeToFit>
+                  Şifremi Unuttum
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Kayıt Ol */}
@@ -238,6 +297,9 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     marginBottom: Spacing.xs,
     fontWeight: '500',
   },
+  labelError: {
+    color: themeColors.error,
+  },
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -246,6 +308,17 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     borderWidth: 1,
     borderColor: themeColors.border,
     paddingHorizontal: Spacing.md,
+  },
+  inputWrapperError: {
+    borderColor: themeColors.error,
+    borderWidth: 1.5,
+    backgroundColor: themeColors.error + '08',
+  },
+  errorText: {
+    fontSize: Typography.fontSize.xs,
+    color: themeColors.error,
+    marginTop: 4,
+    marginLeft: 2,
   },
   inputIcon: {
     marginRight: Spacing.sm,
@@ -262,18 +335,34 @@ const createStyles = (themeColors: any) => StyleSheet.create({
   eyeButton: {
     padding: Spacing.xs,
   },
+  actionRow: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.md,
+  },
   loginButton: {
     backgroundColor: themeColors.primary,
     borderRadius: BorderRadius.md,
     height: 52,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: Spacing.md,
+    paddingHorizontal: Spacing.xs,
     shadowColor: themeColors.primary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 6,
+  },
+  loginButtonFlex: {
+    flex: 1,
+    marginTop: 0,
+  },
+  forgotButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1.5,
+    borderColor: themeColors.primary,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -283,6 +372,11 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     fontSize: Typography.fontSize.lg,
     fontWeight: '700',
     letterSpacing: 0.5,
+  },
+  forgotButtonText: {
+    color: themeColors.primary,
+    fontSize: Typography.fontSize.sm,
+    fontWeight: '700',
   },
   registerSection: {
     flexDirection: 'row',

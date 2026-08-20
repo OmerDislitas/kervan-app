@@ -9,6 +9,8 @@ if (__DEV__) {
     if (msg.includes('keep awake') || msg.includes('keepAwake')) return;
     // Expo Go'da Android push bildirimi desteklenmiyor uyarısını yut
     if (msg.includes('expo-notifications') && msg.includes('Android Push notifications')) return;
+    // Supabase'in geçersiz refresh token hatası — kod hatası değil, oturum süresi dolmuş
+    if (msg.includes('Invalid Refresh Token') || msg.includes('Refresh Token Not Found')) return;
     _origError(...args);
   };
 

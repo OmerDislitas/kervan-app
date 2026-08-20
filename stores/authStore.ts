@@ -19,6 +19,7 @@ export type UserProfile = {
   points: number;
   is_private: boolean;
   bio: string | null;
+  avatar_id: number | null;
 };
 
 type AuthState = {
@@ -28,11 +29,17 @@ type AuthState = {
   isLoading: boolean;
   isAdmin: boolean;
   pendingProfileData: any | null;
+  // Şifremi unuttum akışı OTP doğrulamasıyla geçici bir oturum açar.
+  // Bu bayrak true iken kök layout'taki otomatik yönlendirme devre dışı
+  // kalır — aksi halde kullanıcı yeni şifresini girmeden uygulamaya
+  // atılır. Bkz. app/(auth)/forgot-password.tsx
+  passwordRecoveryInProgress: boolean;
 
   setSession: (session: Session | null) => void;
   setProfile: (profile: UserProfile | null) => void;
   setLoading: (loading: boolean) => void;
   setPendingProfileData: (data: any) => void;
+  setPasswordRecoveryInProgress: (inProgress: boolean) => void;
   fetchProfile: (userId: string) => Promise<void>;
   loadCachedProfile: () => Promise<void>;
   signOut: () => Promise<void>;
@@ -46,6 +53,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   isLoading: true,
   isAdmin: false,
   pendingProfileData: null,
+  passwordRecoveryInProgress: false,
 
   setSession: (session) =>
     set({
@@ -62,6 +70,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setLoading: (isLoading) => set({ isLoading }),
 
   setPendingProfileData: (data) => set({ pendingProfileData: data }),
+
+  setPasswordRecoveryInProgress: (inProgress) => set({ passwordRecoveryInProgress: inProgress }),
 
   fetchProfile: async (userId: string) => {
     try {

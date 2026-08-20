@@ -12,7 +12,7 @@ import SuggestModal from './_components/SuggestModal';
 async function fetchQuestions() {
   const { data, error } = await supabase
     .from('weekly_questions')
-    .select('*, profiles(full_name, username)')
+    .select('*, profiles(full_name, username), question_comments(id, content, profiles(full_name, username), comment_likes(user_id))')
     .order('created_at', { ascending: false });
   if (error) throw error;
   return data;

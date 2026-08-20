@@ -20,6 +20,12 @@ interface Question {
   is_active: boolean;
   created_at: string;
   profiles?: { full_name?: string; username?: string };
+  question_comments?: {
+    id: string;
+    content: string;
+    profiles?: { full_name?: string; username?: string };
+    comment_likes?: { user_id: string }[];
+  }[];
 }
 
 interface QuestionListProps {
@@ -39,6 +45,15 @@ const QuestionCard = React.memo(function QuestionCard({
   themeColors: any;
 }) {
   const router = useRouter();
+
+  const topComment = React.useMemo(() => {
+    const comments = item.question_comments;
+    if (!comments || comments.length === 0) return null;
+    return comments.reduce((best, c) =>
+      (c.comment_likes?.length || 0) > (best.comment_likes?.length || 0) ? c : best
+    );
+  }, [item.question_comments]);
+
   return (
     <TouchableOpacity
       style={styles.card}
@@ -47,50 +62,37 @@ const QuestionCard = React.memo(function QuestionCard({
     >
       <View style={styles.cardGlow} />
       <View style={styles.cardContent}>
-        <View style={styles.cardHeader}>
-          <View style={[styles.badge, !item.is_active && styles.badgeInactive]}>
-            <View
-              style={[
-                styles.badgeDot,
-                { backgroundColor: item.is_active ? themeColors.primary : themeColors.textMuted },
-              ]}
-            />
-            <Text style={[styles.badgeText, !item.is_active && { color: themeColors.textMuted }]}>
-              {item.is_active ? 'AKTİF TARTIŞMA' : 'KAPANDI'}
-            </Text>
-          </View>
-          <Text style={styles.dateText}>
-            {new Date(item.created_at).toLocaleDateString('tr-TR')}
-          </Text>
-        </View>
-
         <Text style={styles.title}>{item.title}</Text>
 
-        {item.description ? (
-          <Text style={styles.description} numberOfLines={2}>
-            {item.description}
-          </Text>
-        ) : null}
-
         <View style={styles.cardFooter}>
-          <View style={styles.authorGroup}>
-            <View style={styles.authorAvatar}>
-              <Text style={styles.authorAvatarText}>
-                {(item.profiles?.username || item.profiles?.full_name || 'K')
-                  .charAt(0)
-                  .toUpperCase()}
-              </Text>
+          {topComment ? (
+            <View style={styles.topCommentBox}>
+              <Ionicons name="chatbubble-ellipses" size={14} color={themeColors.primary} style={styles.topCommentIcon} />
+              <View style={styles.topCommentBody}>
+                <View style={styles.topCommentMetaRow}>
+                  <Text style={styles.topCommentAuthor} numberOfLines={1}>
+                    {topComment.profiles?.username
+                      ? `@${topComment.profiles.username}`
+                      : topComment.profiles?.full_name || 'Kullanıcı'}
+                  </Text>
+                  <View style={styles.topCommentLikeRow}>
+                    <Ionicons name="heart" size={11} color={themeColors.textMuted} />
+                    <Text style={styles.topCommentLikeCount}>
+                      {topComment.comment_likes?.length || 0}
+                    </Text>
+                  </View>
+                </View>
+                <Text style={styles.topCommentText} numberOfLines={2}>
+                  {topComment.content}
+                </Text>
+              </View>
             </View>
-            <Text style={styles.authorName}>
-              {item.profiles?.username
-                ? `@${item.profiles.username}`
-                : item.profiles?.full_name || 'Kullanıcı'}
-            </Text>
-          </View>
-          <View style={styles.commentInfo}>
-            <Ionicons name="chatbubbles" size={16} color={themeColors.primary} />
-            <Text style={styles.commentCount}>Tartışmaya Katıl</Text>
-          </View>
+          ) : (
+            <View style={styles.topCommentBox}>
+              <Ionicons name="chatbubble-outline" size={14} color={themeColors.textMuted} />
+              <Text style={styles.topCommentEmptyText}>Henüz yorum yok, ilk yorumu sen yap!</Text>
+            </View>
+          )}
         </View>
       </View>
     </TouchableOpacity>
@@ -196,62 +198,56 @@ const createStyles = (themeColors: any) =>
       backgroundColor: themeColors.primary + '08',
     },
     cardContent: { padding: Spacing.lg },
-    cardHeader: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      marginBottom: Spacing.md,
-    },
-    badge: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 6,
-      backgroundColor: themeColors.primary + '10',
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 8,
-    },
-    badgeInactive: { backgroundColor: themeColors.surfaceLight },
-    badgeDot: { width: 6, height: 6, borderRadius: 3 },
-    badgeText: {
-      fontSize: 10,
-      fontWeight: '900',
-      color: themeColors.primary,
-      letterSpacing: 0.5,
-    },
-    dateText: { fontSize: 11, color: themeColors.textMuted, fontWeight: '600' },
     title: {
       fontSize: 20,
       fontWeight: '800',
       color: themeColors.textPrimary,
+      marginTop: Spacing.xs,
       marginBottom: Spacing.xs,
       lineHeight: 28,
     },
-    description: {
-      fontSize: 14,
-      color: themeColors.textSecondary,
-      marginBottom: Spacing.lg,
-      lineHeight: 20,
-    },
     cardFooter: {
-      flexDirection: 'row',
-      justifyContent: 'space-between',
-      alignItems: 'center',
       paddingTop: Spacing.md,
       borderTopWidth: 1,
       borderTopColor: themeColors.border + '50',
     },
-    authorGroup: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-    authorAvatar: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      backgroundColor: themeColors.primary + '20',
-      alignItems: 'center',
-      justifyContent: 'center',
+    topCommentBox: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 8,
     },
-    authorAvatarText: { fontSize: 12, fontWeight: 'bold', color: themeColors.primary },
-    authorName: { fontSize: 13, fontWeight: '700', color: themeColors.textSecondary },
-    commentInfo: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-    commentCount: { fontSize: 12, fontWeight: '800', color: themeColors.primary },
+    topCommentIcon: { marginTop: 2 },
+    topCommentBody: { flex: 1 },
+    topCommentMetaRow: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: 3,
+      gap: 8,
+    },
+    topCommentAuthor: {
+      flex: 1,
+      fontSize: 12,
+      fontWeight: '700',
+      color: themeColors.textPrimary,
+    },
+    topCommentLikeRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+    topCommentLikeCount: {
+      fontSize: 11,
+      fontWeight: '700',
+      color: themeColors.textMuted,
+    },
+    topCommentText: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: themeColors.textSecondary,
+      lineHeight: 18,
+    },
+    topCommentEmptyText: {
+      flex: 1,
+      fontSize: 13,
+      fontWeight: '600',
+      color: themeColors.textMuted,
+      fontStyle: 'italic',
+    },
   });

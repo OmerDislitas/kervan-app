@@ -8,6 +8,7 @@ import {
   Switch,
   Platform,
   Alert,
+  Modal,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -27,17 +28,16 @@ export default function SettingsScreen() {
   const styles = React.useMemo(() => createStyles(themeColors), [themeColors]);
   const isLightMode = themeColors.background === '#FFFFFF';
   const router = useRouter();
-  const { 
-    theme, 
-    setTheme, 
-    notificationsEnabled, 
+  const {
+    theme,
+    setTheme,
+    notificationsEnabled,
     setNotificationsEnabled,
     hapticFeedback,
     setHapticFeedback,
-    dataSaver,
-    setDataSaver
   } = useSettingsStore();
   const { profile } = useAuthStore();
+  const [aboutVisible, setAboutVisible] = React.useState(false);
 
   const handleNotificationToggle = async (value: boolean) => {
     if (value) {
@@ -91,7 +91,23 @@ export default function SettingsScreen() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        
+
+        {/* Hesap */}
+        <Text style={styles.sectionTitle}>Hesap</Text>
+        <View style={styles.settingsGroup}>
+          <TouchableOpacity
+            style={styles.settingAction}
+            activeOpacity={0.7}
+            onPress={() => router.push('/(app)/profile/edit-profile')}
+          >
+            <View style={styles.settingInfo}>
+              <Ionicons name="person-circle" size={20} color={themeColors.textSecondary} />
+              <Text style={styles.settingActionText}>Profili Düzenle</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={themeColors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
         {/* Görünüm Ayarları */}
         <Text style={styles.sectionTitle}>Görünüm</Text>
         <View style={styles.settingsGroup}>
@@ -156,26 +172,6 @@ export default function SettingsScreen() {
               thumbColor={Platform.OS === 'ios' ? '#fff' : hapticFeedback ? '#fff' : '#f4f3f4'}
             />
           </View>
-
-          <View style={styles.divider} />
-
-          <View style={styles.settingItem}>
-            <View style={styles.settingInfo}>
-              <View style={[styles.settingIcon, isLightMode && { backgroundColor: '#E2E8F0' }]}>
-                <Ionicons name="cellular" size={20} color={themeColors.primary} />
-              </View>
-              <View>
-                <Text style={styles.settingTitle}>Düşük Veri Modu</Text>
-                <Text style={styles.settingSubtitle}>Görselleri düşük kalitede yükler</Text>
-              </View>
-            </View>
-            <Switch
-              value={dataSaver}
-              onValueChange={setDataSaver}
-              trackColor={{ false: themeColors.border, true: themeColors.primary }}
-              thumbColor={Platform.OS === 'ios' ? '#fff' : dataSaver ? '#fff' : '#f4f3f4'}
-            />
-          </View>
         </View>
 
         {/* Destek ve Hakkında */}
@@ -197,7 +193,7 @@ export default function SettingsScreen() {
             <Ionicons name="chevron-forward" size={18} color={themeColors.textMuted} />
           </TouchableOpacity>
           <View style={styles.divider} />
-          <TouchableOpacity style={styles.settingAction} activeOpacity={0.7}>
+          <TouchableOpacity style={styles.settingAction} activeOpacity={0.7} onPress={() => setAboutVisible(true)}>
             <View style={styles.settingInfo}>
               <Ionicons name="information-circle" size={20} color={themeColors.textSecondary} />
               <Text style={styles.settingActionText}>FikirForum Hakkında</Text>
@@ -209,6 +205,37 @@ export default function SettingsScreen() {
         </View>
 
       </ScrollView>
+
+      <Modal
+        visible={aboutVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAboutVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setAboutVisible(false)}
+        >
+          <View style={styles.aboutContent}>
+            <View style={styles.aboutIndicator} />
+            <Ionicons name="information-circle" size={36} color={themeColors.primary} />
+            <Text style={styles.aboutTitle}>FikirForum Hakkında</Text>
+            <Text style={styles.aboutText}>
+              FikirForum; fikirlerin, sorulara verilen yanıtların ve toplulukla paylaşılan
+              düşüncelerin bir araya geldiği bir tartışma platformudur.
+            </Text>
+            <View style={styles.aboutCreditsBox}>
+              <Text style={styles.aboutCreditsTitle}>Geliştirici Ekip:</Text>
+              <Text style={styles.aboutCreditsLine}>Vizyon & Konsept: Talha Yasir Koç</Text>
+              <Text style={styles.aboutCreditsLine}>Yazılım Geliştirme (Developer): Ömer Faruk Dişlitaş</Text>
+            </View>
+            <TouchableOpacity style={styles.aboutCloseBtn} onPress={() => setAboutVisible(false)}>
+              <Text style={styles.aboutCloseBtnText}>Kapat</Text>
+            </TouchableOpacity>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -318,5 +345,72 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     fontSize: Typography.fontSize.xs,
     color: themeColors.textSecondary,
     fontWeight: '600',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    padding: Spacing.lg,
+  },
+  aboutContent: {
+    backgroundColor: themeColors.background,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: themeColors.border,
+  },
+  aboutIndicator: {
+    width: 40,
+    height: 4,
+    backgroundColor: themeColors.border,
+    borderRadius: 2,
+    marginBottom: Spacing.md,
+  },
+  aboutTitle: {
+    fontSize: Typography.fontSize.lg,
+    fontWeight: '800',
+    color: themeColors.textPrimary,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.sm,
+  },
+  aboutText: {
+    fontSize: Typography.fontSize.sm,
+    color: themeColors.textSecondary,
+    textAlign: 'center',
+    lineHeight: 20,
+    marginBottom: Spacing.lg,
+  },
+  aboutCreditsBox: {
+    width: '100%',
+    backgroundColor: themeColors.surface,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: themeColors.border,
+    padding: Spacing.md,
+    marginBottom: Spacing.lg,
+  },
+  aboutCreditsTitle: {
+    fontSize: Typography.fontSize.sm,
+    fontWeight: '800',
+    color: themeColors.textPrimary,
+    marginBottom: Spacing.xs,
+  },
+  aboutCreditsLine: {
+    fontSize: Typography.fontSize.sm,
+    color: themeColors.textSecondary,
+    lineHeight: 20,
+  },
+  aboutCloseBtn: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: BorderRadius.md,
+    backgroundColor: themeColors.primary,
+    alignItems: 'center',
+  },
+  aboutCloseBtnText: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: '700',
+    color: '#fff',
   },
 });

@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Alert,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,6 +22,7 @@ import { Colors, Typography, Spacing, BorderRadius, useThemeColors } from '@/con
 import { DAYS_OF_WEEK } from '@/constants/data';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BADGES, UserBadgeStats } from '@/constants/badges';
+import { getAvatarSource } from '@/constants/avatars';
 
 type MyEvent = {
   event_id: string;
@@ -42,7 +44,7 @@ async function fetchUserProfile(userId: string) {
   // email/phone/push_token ARTIK okunamaz (PII koruması — security_fixes.sql K-2).
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, full_name, username, bio, gender, role, is_private, points, followers_count, following_count, university_name, department, university_year, created_at')
+    .select('id, full_name, username, bio, gender, role, is_private, points, followers_count, following_count, university_name, department, university_year, created_at, avatar_id')
     .eq('id', userId)
     .single();
   if (error) throw error;
@@ -355,7 +357,11 @@ export default function UserProfileScreen() {
               style={styles.avatarOuterRing}
             >
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{getInitials(userProfile?.full_name ?? 'U')}</Text>
+                {userProfile?.avatar_id ? (
+                  <Image source={getAvatarSource(userProfile.avatar_id)} style={styles.avatarImage} />
+                ) : (
+                  <Text style={styles.avatarText}>{getInitials(userProfile?.full_name ?? 'U')}</Text>
+                )}
               </View>
             </LinearGradient>
           </View>
@@ -594,15 +600,16 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
-  avatar: { 
-    width: 86, 
-    height: 86, 
-    borderRadius: 43, 
-    backgroundColor: themeColors.primary, 
-    alignItems: 'center', 
+  avatar: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    backgroundColor: themeColors.primary,
+    alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 3,
     borderColor: themeColors.surface,
+    overflow: 'hidden',
   },
   avatarImage: { width: '100%', height: '100%' },
   avatarText: { fontSize: 30, fontWeight: '900', color: '#FFFFFF', letterSpacing: 1 },

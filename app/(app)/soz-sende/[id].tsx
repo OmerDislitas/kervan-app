@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,33 +7,32 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
   Alert,
-  Image,
-  Dimensions,
-  Animated,
+  Keyboard,
   Modal,
   RefreshControl,
-  Keyboard,
+  Image,
 } from 'react-native';
-import { useLocalSearchParams, useRouter, useNavigation } from 'expo-router';
+import { useLocalSearchParams, useRouter, useFocusEffect } from 'expo-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { Typography, Spacing, BorderRadius, useThemeColors } from '@/constants/theme';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { KeyboardStickyView } from 'react-native-keyboard-controller';
 import { useAuthStore } from '@/stores/authStore';
+import { useTabBarStore } from '@/stores/tabBarStore';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { sendPushNotification } from '@/lib/notificationService';
+import { getAvatarSource } from '@/constants/avatars';
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
+
 
 async function fetchQuestionDetail(id: string) {
   const { data, error } = await supabase
     .from('weekly_questions')
-    .select('*, profiles(full_name, username)')
+    .select('*, profiles(full_name, username, avatar_id)')
     .eq('id', id)
     .single();
 
@@ -44,7 +43,7 @@ async function fetchQuestionDetail(id: string) {
 async function fetchComments(questionId: string) {
   const { data, error } = await supabase
     .from('question_comments')
-    .select('*, profiles(full_name, username), comment_likes(user_id)')
+    .select('*, profiles(full_name, username, avatar_id), comment_likes(user_id)')
     .eq('question_id', questionId)
     .order('created_at', { ascending: true });
 
@@ -60,13 +59,42 @@ export default function QuestionDetailScreen() {
   const themeColors = useThemeColors();
   const styles = useMemo(() => createStyles(themeColors), [themeColors]);
   const authorStyles = useMemo(() => createAuthorStyles(themeColors), [themeColors]);
-  const navigation = useNavigation();
-
-
+  const insets = useSafeAreaInsets();
 
   const [newComment, setNewComment] = useState('');
   const [replyTo, setReplyTo] = useState<{ id: string, name: string } | null>(null);
-  
+
+  // Yorum kartına çift tıklamayı algılamak için son dokunuşu takip eder
+  const lastTapRef = useRef<{ id: string, time: number } | null>(null);
+  const DOUBLE_TAP_DELAY = 300;
+
+  // Yorum sıralama skorları — her yorum ilk görüldüğü anda (o anki beğeni
+  // sayısı ve yaşı ile) bir kez hesaplanıp burada dondurulur. Böylece bir
+  // yoruma sonradan beğeni yapıldığında listedeki sırası DEĞİŞMEZ; skor
+  // sadece yeni gelen yorumların "en beğenilen" ile "en yeni" arasında
+  // nereye düşeceğini belirlemek için kullanılır (Hacker News tarzı "hot"
+  // formülü: (beğeni + 1) / (yaş_saat + 2) ^ 1.5).
+  const commentScoresRef = useRef<Map<string, number>>(new Map());
+
+  // ------------------------------------------------------------------
+  // TAB BAR — Bu ekranda tab bar'ı gizle (klavye ile çakışmasın).
+  // Stil burada yeniden hesaplanıp setOptions ile geri yazılmıyor — sadece
+  // paylaşılan store'daki bayrağı değiştiriyoruz. Gerçek tabBarStyle her
+  // zaman app/(app)/_layout.tsx'de, güncel insets ile tek bir yerden
+  // hesaplanıyor. Böylece eski/yanlış bir kopya geri yazılıp sistem
+  // navigasyon çubuğunun ikonların üstüne binmesi mümkün değil.
+  // KeyboardStickyView native olarak klavye pozisyonunu takip eder,
+  // herhangi bir manuel hesaplama yok.
+  // ------------------------------------------------------------------
+  const setTabBarHidden = useTabBarStore((state) => state.setHidden);
+
+  useFocusEffect(
+    useCallback(() => {
+      setTabBarHidden(true);
+      return () => setTabBarHidden(false);
+    }, [setTabBarHidden])
+  );
+
   // Düzenleme ve Seçenekler için stateler
   const [optionsVisible, setOptionsVisible] = useState(false);
   const [editModalVisible, setEditModalVisible] = useState(false);
@@ -201,11 +229,34 @@ export default function QuestionDetailScreen() {
         await supabase.from('comment_likes').insert({ comment_id: commentId, user_id: profile!.id });
       }
     },
+    // Optimistic update — beğeni anında arayüzde yansır, sunucu yanıtı
+    // beklenirken ekranda yükleniyor/flicker görünmez.
+    onMutate: async ({ commentId, hasLiked }) => {
+      await queryClient.cancelQueries({ queryKey: ['comments', id] });
+      const previousComments = queryClient.getQueryData(['comments', id]);
+
+      queryClient.setQueryData(['comments', id], (old: any[] = []) =>
+        old.map((c) => {
+          if (c.id !== commentId) return c;
+          const likes = c.comment_likes || [];
+          const newLikes = hasLiked
+            ? likes.filter((l: any) => l.user_id !== profile?.id)
+            : [...likes, { user_id: profile?.id }];
+          return { ...c, comment_likes: newLikes };
+        })
+      );
+
+      return { previousComments };
+    },
+    onError: (_error, _variables, context) => {
+      if (context?.previousComments) {
+        queryClient.setQueryData(['comments', id], context.previousComments);
+      }
+    },
     onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['comments', id] });
       if (!variables.hasLiked) {
         AsyncStorage.setItem('@fikirforum_last_like_time', Date.now().toString()).catch(() => {});
-        
+
         // Send notification to comment author
         const comment = comments.find(c => c.id === variables.commentId);
         if (comment && comment.user_id !== profile?.id) {
@@ -217,7 +268,10 @@ export default function QuestionDetailScreen() {
           ).catch(() => {});
         }
       }
-    }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['comments', id] });
+    },
   });
 
   const handleSendComment = () => {
@@ -244,9 +298,18 @@ export default function QuestionDetailScreen() {
     );
   }
 
-  const mainComments = comments
-    .filter(c => !c.parent_id)
-    .sort((a, b) => (b.comment_likes?.length || 0) - (a.comment_likes?.length || 0));
+  const mainCommentsList = comments.filter(c => !c.parent_id);
+  const now = Date.now();
+  mainCommentsList.forEach((c) => {
+    if (!commentScoresRef.current.has(c.id)) {
+      const ageHours = Math.max((now - new Date(c.created_at).getTime()) / 3_600_000, 0);
+      const likes = c.comment_likes?.length || 0;
+      commentScoresRef.current.set(c.id, (likes + 1) / Math.pow(ageHours + 2, 1.5));
+    }
+  });
+  const mainComments = [...mainCommentsList].sort(
+    (a, b) => (commentScoresRef.current.get(b.id) || 0) - (commentScoresRef.current.get(a.id) || 0)
+  );
 
   const renderComment = (item: any, isReply = false) => {
     const likesCount = item.comment_likes?.length || 0;
@@ -265,6 +328,17 @@ export default function QuestionDetailScreen() {
         <TouchableOpacity
           activeOpacity={!isReply && replies.length > 0 ? 0.92 : 1}
           onPress={() => {
+            const now = Date.now();
+            const lastTap = lastTapRef.current;
+
+            if (lastTap && lastTap.id === item.id && now - lastTap.time < DOUBLE_TAP_DELAY) {
+              lastTapRef.current = null;
+              handleLike(item.id, item.comment_likes || []);
+              return;
+            }
+
+            lastTapRef.current = { id: item.id, time: now };
+
             if (!isReply && replies.length > 0) {
               setExpandedComments(prev =>
                 prev.includes(item.id)
@@ -280,14 +354,18 @@ export default function QuestionDetailScreen() {
               onPress={() => navigateToProfile(item.user_id)}
               activeOpacity={0.8}
             >
-              <LinearGradient
-                colors={[themeColors.surfaceLight, themeColors.border]}
-                style={styles.avatarCircle}
-              >
-                <Text style={styles.avatarText}>
-                  {(item.profiles?.username || item.profiles?.full_name || 'U').charAt(0).toUpperCase()}
-                </Text>
-              </LinearGradient>
+              {item.profiles?.avatar_id ? (
+                <Image source={getAvatarSource(item.profiles.avatar_id)} style={styles.avatarCircle} />
+              ) : (
+                <LinearGradient
+                  colors={[themeColors.surfaceLight, themeColors.border]}
+                  style={styles.avatarCircle}
+                >
+                  <Text style={styles.avatarText}>
+                    {(item.profiles?.username || item.profiles?.full_name || 'U').charAt(0).toUpperCase()}
+                  </Text>
+                </LinearGradient>
+              )}
             </TouchableOpacity>
             
             <View style={styles.authorInfo}>
@@ -295,13 +373,13 @@ export default function QuestionDetailScreen() {
                 <TouchableOpacity onPress={() => navigateToProfile(item.user_id)}>
                   <Text style={styles.authorName}>{authorName}</Text>
                 </TouchableOpacity>
+                <Text style={styles.timeText}>{new Date(item.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</Text>
                 {item.user_id === profile?.id && (
                   <View style={styles.selfBadge}>
                     <Text style={styles.selfBadgeText}>Siz</Text>
                   </View>
                 )}
               </View>
-              <Text style={styles.timeText}>{new Date(item.created_at).toLocaleDateString('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</Text>
             </View>
 
             <TouchableOpacity 
@@ -396,16 +474,14 @@ export default function QuestionDetailScreen() {
   };
 
   return (
+    // edges=['top'] — bottom inset manuel yönetiliyor (keyboardPad)
     <SafeAreaView style={styles.container} edges={['top']}>
-      <KeyboardAvoidingView 
-        style={{ flex: 1 }} 
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
-      >
-        {/* Modern Header */}
+      {/* Tab bar gizlenince içerik tam ekrana iner, klavye için ek güvenlik */}
+      <View style={{ flex: 1 }}>
+        {/* Header */}
         <View style={styles.topHeader}>
-          <TouchableOpacity 
-            onPress={() => router.push('/(app)/soz-sende')} 
+          <TouchableOpacity
+            onPress={() => router.push('/(app)/soz-sende')}
             style={styles.roundBackBtn}
           >
             <Ionicons name="chevron-back" size={24} color={themeColors.textPrimary} />
@@ -474,41 +550,57 @@ export default function QuestionDetailScreen() {
           }
         />
 
-        {/* Floating Input Area */}
+      </View>
+
+      {/* Footer — KeyboardStickyView klavyenin tam üstüne native olarak yapışır.
+          SafeAreaView edges=['top'] olduğu için bottom inset burada elle
+          uygulanıyor — aksi halde input, alt navigasyon çubuğu olan
+          cihazlarda o çubuğun altına/üstüne biniyordu. Klavye açıkken
+          klavyenin kendisi zaten o alanı kapladığı için offset sıfırlanıyor. */}
+      <KeyboardStickyView offset={{ closed: -insets.bottom, opened: 0 }}>
         <View style={styles.footerContainer}>
           {replyTo && (
             <View style={styles.replyBar}>
               <Ionicons name="arrow-undo" size={14} color={themeColors.primary} />
-              <Text style={styles.replyBarText}>
+              <Text style={styles.replyBarText} numberOfLines={1}>
                 <Text style={{ fontWeight: 'bold' }}>{replyTo.name}</Text> kullanıcısına yanıt veriliyor
               </Text>
-              <TouchableOpacity onPress={() => setReplyTo(null)}>
+              <TouchableOpacity onPress={() => setReplyTo(null)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
                 <Ionicons name="close-circle" size={18} color={themeColors.textMuted} />
               </TouchableOpacity>
             </View>
           )}
           <View style={styles.inputRow}>
-            <View style={styles.inputWrapper}>
+            <View style={[
+              styles.inputWrapper,
+              newComment.length > 0 && { borderColor: themeColors.primary + '60' }
+            ]}>
               <TextInput
                 style={styles.textInput}
                 placeholder={replyTo ? "Yanıtınızı buraya yazın..." : "Düşüncelerinizi paylaşın..."}
                 placeholderTextColor={themeColors.textMuted}
                 value={newComment}
-                onChangeText={setNewComment}
+                onChangeText={(text) => text.length <= 280 && setNewComment(text)}
                 multiline
                 maxLength={280}
                 scrollEnabled={true}
+                returnKeyType="default"
+                blurOnSubmit={false}
               />
               <View style={styles.counterRow}>
-                <Text style={[styles.charCounter, newComment.length >= 260 && { color: newComment.length >= 280 ? themeColors.error : themeColors.primary }]}>
+                <Text style={[
+                  styles.charCounter,
+                  newComment.length >= 250 && { color: newComment.length >= 280 ? themeColors.error : themeColors.warning },
+                ]}>
                   {newComment.length}/280
                 </Text>
               </View>
             </View>
-            <TouchableOpacity 
-              style={[styles.sendBtn, !newComment.trim() && styles.sendBtnDisabled]} 
+            <TouchableOpacity
+              style={[styles.sendBtn, (!newComment.trim() || commentMutation.isPending) && styles.sendBtnDisabled]}
               onPress={handleSendComment}
               disabled={!newComment.trim() || commentMutation.isPending}
+              activeOpacity={0.8}
             >
               {commentMutation.isPending ? (
                 <ActivityIndicator size="small" color="#fff" />
@@ -518,7 +610,7 @@ export default function QuestionDetailScreen() {
             </TouchableOpacity>
           </View>
         </View>
-      </KeyboardAvoidingView>
+      </KeyboardStickyView>
 
       {/* Seçenekler Modalı (Edit/Delete) */}
       <Modal
@@ -538,20 +630,22 @@ export default function QuestionDetailScreen() {
               <Text style={styles.optionsTitle}>Yorum Seçenekleri</Text>
             </View>
 
-            <TouchableOpacity 
-              style={styles.optionItem} 
-              onPress={() => {
-                setOptionsVisible(false);
-                setEditModalVisible(true);
-              }}
-            >
-              <View style={[styles.optionIcon, { backgroundColor: themeColors.primary + '15' }]}>
-                <Ionicons name="pencil-outline" size={20} color={themeColors.primary} />
-              </View>
-              <Text style={styles.optionText}>Düzenle</Text>
-            </TouchableOpacity>
+            {selectedComment?.user_id === profile?.id && (
+              <TouchableOpacity
+                style={styles.optionItem}
+                onPress={() => {
+                  setOptionsVisible(false);
+                  setEditModalVisible(true);
+                }}
+              >
+                <View style={[styles.optionIcon, { backgroundColor: themeColors.primary + '15' }]}>
+                  <Ionicons name="pencil-outline" size={20} color={themeColors.primary} />
+                </View>
+                <Text style={styles.optionText}>Düzenle</Text>
+              </TouchableOpacity>
+            )}
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.optionItem, { borderBottomWidth: 0 }]} 
               onPress={() => {
                 setOptionsVisible(false);
@@ -590,10 +684,7 @@ export default function QuestionDetailScreen() {
         animationType="slide"
         onRequestClose={() => setEditModalVisible(false)}
       >
-        <KeyboardAvoidingView 
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.modalOverlay}
-        >
+        <View style={styles.modalOverlay}>
           <View style={styles.editContent}>
             <View style={styles.editHeader}>
               <Text style={styles.editTitle}>Yorumu Düzenle</Text>
@@ -633,7 +724,7 @@ export default function QuestionDetailScreen() {
               </TouchableOpacity>
             </View>
           </View>
-        </KeyboardAvoidingView>
+        </View>
       </Modal>
     </SafeAreaView>
   );
@@ -770,6 +861,7 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   avatarText: {
     fontSize: 16,
@@ -804,7 +896,6 @@ const createStyles = (themeColors: any) => StyleSheet.create({
   timeText: {
     fontSize: 11,
     color: themeColors.textMuted,
-    marginTop: 1,
   },
   likeIconBtn: {
     alignItems: 'center',
@@ -895,7 +986,7 @@ const createStyles = (themeColors: any) => StyleSheet.create({
   footerContainer: {
     backgroundColor: themeColors.background,
     paddingHorizontal: Spacing.lg,
-    paddingBottom: Platform.OS === 'ios' ? 30 : 15,
+    paddingBottom: 12,
     paddingTop: 10,
     borderTopWidth: 1,
     borderTopColor: themeColors.border,
@@ -987,7 +1078,7 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: Spacing.xl,
-    paddingBottom: Platform.OS === 'ios' ? 40 : Spacing.xl,
+    paddingBottom: Spacing.xl,
   },
   optionsHeader: {
     alignItems: 'center',
@@ -1044,7 +1135,7 @@ const createStyles = (themeColors: any) => StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: Spacing.xl,
-    paddingBottom: Platform.OS === 'ios' ? 40 : Spacing.xl,
+    paddingBottom: Spacing.xl,
   },
   editHeader: {
     flexDirection: 'row',

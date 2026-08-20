@@ -1,9 +1,10 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { QueryClient, QueryClientProvider, onlineManager } from '@tanstack/react-query';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { supabase } from '@/lib/supabase';
 import { useAuthStore } from '@/stores/authStore';
 import { useThemeColors } from '@/constants/theme';
@@ -17,9 +18,7 @@ import { OfflineNotice } from '@/components/OfflineNotice';
 // Native splash ekranını JS bundle yüklenene kadar dondur
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-// Splash animasyonu toplam süresi: 2000 (slide) + 4000 (delay) + 1200 (fade) = 7200ms
-// 7500ms'de kesinlikle routing'e izin ver.
-const SPLASH_DURATION_MS = 7500;
+
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -38,27 +37,17 @@ onlineManager.setEventListener((setOnline) => {
 });
 
 function RootLayoutNav() {
-  const { session, profile, setSession, fetchProfile, setLoading, isLoading } =
+  const { session, profile, setSession, fetchProfile, setLoading, isLoading, passwordRecoveryInProgress } =
     useAuthStore();
   const segments = useSegments();
   const router = useRouter();
   const lastNotificationResponse = Notifications.useLastNotificationResponse();
 
-  // Splash ekranının animasyonu bitmesi için yeterli süre geçti mi?
-  const [splashReady, setSplashReady] = useState(false);
-
   // Auth başlatma sadece bir kez yapılsın diye guard
   const authInitDone = useRef(false);
 
-  useEffect(() => {
-    // Splash: animasyonun bitmesi için sabit süre bekliyoruz.
-    // Animasyon callback'e bağlı değil → hiçbir zaman takılmaz.
-    const splashTimer = setTimeout(() => {
-      setSplashReady(true);
-    }, SPLASH_DURATION_MS);
-
-    return () => clearTimeout(splashTimer);
-  }, []);
+  // Splash animasyonu kaldırıldı — routing hemen etkinleşir
+  const splashReady = true;
 
   useEffect(() => {
     if (authInitDone.current) return;
@@ -143,7 +132,11 @@ function RootLayoutNav() {
               return;
             }
 
-            if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+            // NOT: PASSWORD_RECOVERY (şifremi unuttum OTP doğrulaması) da
+            // buraya dahil — aksi halde profil hiç çekilmez ve routing
+            // effect'i "profile === null" gördüğü için kullanıcıyı yeni
+            // şifre ekranından login'e geri atar.
+            if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') {
               try {
                 setSession(session);
                 await fetchProfile(session.user.id);
@@ -169,7 +162,7 @@ function RootLayoutNav() {
             setSession(session);
             setLoading(false);
           } catch (err: any) {
-            console.error('[Auth] onAuthStateChange exception:', err?.message || err);
+            console.warn('[Auth] onAuthStateChange exception:', err?.message || err);
             // Auth state callback'inde beklenmeyen hata —
             // session'ı temizleyip login sayfasına düş
             await clearStaleSession();
@@ -180,7 +173,7 @@ function RootLayoutNav() {
     };
 
     initAuth().catch((err) => {
-      console.error('[Auth] initAuth uncaught error:', err);
+      console.warn('[Auth] initAuth uncaught error:', err);
       clearStaleSession();
     });
 
@@ -206,6 +199,11 @@ function RootLayoutNav() {
   useEffect(() => {
     if (isLoading || !splashReady) return;
 
+    // Şifremi unuttum OTP doğrulaması geçici bir oturum açar — bu sırada
+    // otomatik yönlendirmeyi durdurmazsak kullanıcı yeni şifresini
+    // girmeden uygulamaya atılır. Ekran kendi navigasyonunu kendisi yapar.
+    if (passwordRecoveryInProgress) return;
+
     const inAuthGroup = segments[0] === '(auth)';
     const isOnboarding = segments[1] === 'onboarding';
 
@@ -223,7 +221,7 @@ function RootLayoutNav() {
         router.replace('/(app)');
       }
     }
-  }, [session, segments, isLoading, profile, splashReady]);
+  }, [session, segments, isLoading, profile, splashReady, passwordRecoveryInProgress]);
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
@@ -249,13 +247,15 @@ function ThemeStatusBar() {
 export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <SafeAreaProvider>
-        <QueryClientProvider client={queryClient}>
-          <ThemeStatusBar />
-          <RootLayoutNav />
-          <OfflineNotice />
-        </QueryClientProvider>
-      </SafeAreaProvider>
+      <KeyboardProvider>
+        <SafeAreaProvider>
+          <QueryClientProvider client={queryClient}>
+            <ThemeStatusBar />
+            <RootLayoutNav />
+            <OfflineNotice />
+          </QueryClientProvider>
+        </SafeAreaProvider>
+      </KeyboardProvider>
     </GestureHandlerRootView>
   );
 }

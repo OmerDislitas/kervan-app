@@ -8,11 +8,9 @@ interface SettingsState {
   theme: ThemeMode;
   notificationsEnabled: boolean;
   hapticFeedback: boolean;
-  dataSaver: boolean;
   setTheme: (theme: ThemeMode) => void;
   setNotificationsEnabled: (enabled: boolean) => void;
   setHapticFeedback: (enabled: boolean) => void;
-  setDataSaver: (enabled: boolean) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -21,11 +19,9 @@ export const useSettingsStore = create<SettingsState>()(
       theme: 'dark',
       notificationsEnabled: false,
       hapticFeedback: true,
-      dataSaver: false,
       setTheme: (theme) => set({ theme }),
       setNotificationsEnabled: (notificationsEnabled) => set({ notificationsEnabled }),
       setHapticFeedback: (hapticFeedback) => set({ hapticFeedback }),
-      setDataSaver: (dataSaver) => set({ dataSaver }),
     }),
     {
       name: 'fikirforum-settings',
